@@ -1,279 +1,764 @@
-</div>
-                                                <div className="grid grid-cols-2 gap-3 text-sm">
-                                                    <div className="p-3 bg-blue-50 rounded">
-                                                        <div className="text-xs text-gray-600">السعر</div>
-                                                        <div className="font-bold text-blue-600">{prop.proposedPrice.toFixed(0)}</div>
-                                                    </div>
-                                                    <div className="p-3 bg-red-50 rounded">
-                                                        <div className="text-xs text-gray-600">التكلفة</div>
-                                                        <div className="font-bold text-red-600">{prop.totalCost.toFixed(0)}</div>
-                                                    </div>
-                                                    <div className="p-3 bg-green-50 rounded">
-                                                        <div className="text-xs text-gray-600">الربح</div>
-                                                        <div className="font-bold text-green-600">{prop.profit.toFixed(0)}</div>
-                                                    </div>
-                                                    <div className="p-3 bg-purple-50 rounded">
-                                                        <div className="text-xs text-gray-600">الهامش</div>
-                                                        <div className="font-bold text-purple-600">{prop.profitMargin.toFixed(1)}%</div>
-                                                    </div>
-                                                </div>
-                                                <div className="grid md:grid-cols-3 gap-3 mt-3">
-                                                    <div>
-                                                        <label className="block text-xs mb-1">الحالة</label>
-                                                        <select value={prop.status} onChange={(e) => updateProposal(prop.id, 'status', e.target.value)} className="w-full px-2 py-1 border rounded text-sm">
-                                                            <option>قيد الدراسة</option>
-                                                            <option>مقبول</option>
-                                                            <option>مرفوض</option>
-                                                        </select>
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-xs mb-1">سعر المنافس</label>
-                                                        <input type="number" value={prop.competitorPrice} onChange={(e) => updateProposal(prop.id, 'competitorPrice', e.target.value)} className="w-full px-2 py-1 border rounded text-sm" placeholder="اختياري" />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-xs mb-1">اسم المنافس</label>
-                                                        <input type="text" value={prop.competitorName} onChange={(e) => updateProposal(prop.id, 'competitorName', e.target.value)} className="w-full px-2 py-1 border rounded text-sm" placeholder="اختياري" />
-                                                    </div>
-                                                </div>
-                                                {prop.status === 'مرفوض' && (
-                                                    <div className="mt-3">
-                                                        <label className="block text-xs mb-1">سبب الرفض</label>
-                                                        <select value={prop.rejectionReason} onChange={(e) => updateProposal(prop.id, 'rejectionReason', e.target.value)} className="w-full px-2 py-1 border rounded text-sm">
-                                                            <option value="">اختر السبب</option>
-                                                            <option>السعر مرتفع</option>
-                                                            <option>اختاروا منافس</option>
-                                                            <option>تأجيل</option>
-                                                            <option>أخرى</option>
-                                                        </select>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام تسعير خدمات المراجعة</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 30px; margin-bottom: 20px; }
+        h1 { color: #333; margin-bottom: 10px; font-size: 28px; }
+        h2 { color: #555; margin-bottom: 20px; font-size: 22px; }
+        .subtitle { color: #666; font-size: 14px; margin-bottom: 20px; }
+        .tabs { display: flex; gap: 0; background: white; border-radius: 12px; overflow: hidden; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); flex-wrap: wrap; }
+        .tab { padding: 15px 25px; cursor: pointer; background: white; border: none; font-weight: 600; color: #666; transition: all 0.3s; font-size: 15px; white-space: nowrap; }
+        .tab:hover { background: #f5f5f5; }
+        .tab.active { background: #667eea; color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #444; font-size: 14px; }
+        input, select, textarea { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; transition: border 0.3s; }
+        input:focus, select:focus { outline: none; border-color: #667eea; }
+        .btn { padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 15px; transition: all 0.3s; }
+        .btn:hover { background: #5568d3; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(102,126,234,0.3); }
+        .btn-success { background: #10b981; }
+        .btn-success:hover { background: #059669; }
+        .btn-danger { background: #ef4444; }
+        .btn-danger:hover { background: #dc2626; }
+        .result-box { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 12px; color: white; margin-top: 20px; }
+        .result-item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.2); }
+        .result-item:last-child { border-bottom: none; }
+        .result-label { font-weight: 500; }
+        .result-value { font-weight: 700; font-size: 18px; }
+        .proposal-card { background: #f9fafb; padding: 20px; border-radius: 10px; border-left: 4px solid #667eea; margin-bottom: 15px; }
+        .proposal-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px; }
+        .proposal-name { font-weight: 700; font-size: 18px; color: #333; }
+        .proposal-meta { font-size: 13px; color: #666; margin-top: 5px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .stat-card { background: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .stat-value { font-size: 32px; font-weight: 700; color: #667eea; margin: 10px 0; }
+        .stat-label { font-size: 13px; color: #666; font-weight: 600; }
+        .alert { padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: 600; }
+        .alert-warning { background: #fef3c7; border-left: 4px solid #f59e0b; color: #92400e; }
+        .checkbox-label { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+        input[type="checkbox"] { width: auto; }
+        .login-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .login-box { background: white; padding: 40px; border-radius: 12px; max-width: 400px; width: 90%; }
+        .header-flex { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .user-badge { background: #dbeafe; color: #1e40af; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; }
+        .admin-badge { background: #d1fae5; color: #065f46; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; }
+        @media (max-width: 768px) {
+            .grid, .grid-2, .stats-grid { grid-template-columns: 1fr; }
+            h1 { font-size: 22px; }
+            .card { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="card">
+            <div class="header-flex">
+                <div>
+                    <h1>🧮 نظام تسعير خدمات المراجعة</h1>
+                    <p class="subtitle">نظام احترافي لحساب التكاليف والتسعير</p>
+                </div>
+                <div>
+                    <span id="userDisplay"></span>
+                    <button class="btn" id="adminBtn" onclick="showLogin()">🔒 دخول المدير</button>
+                    <button class="btn btn-danger" id="logoutBtn" onclick="logout()" style="display:none">خروج</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Login Overlay -->
+        <div class="login-overlay" id="loginOverlay" style="display:none">
+            <div class="login-box">
+                <h2>تسجيل دخول المدير</h2>
+                <input type="password" id="passwordInput" placeholder="كلمة المرور" style="margin: 20px 0">
+                <div style="display:flex; gap:10px">
+                    <button class="btn" onclick="login()">دخول</button>
+                    <button class="btn" onclick="hideLogin()" style="background:#999">إلغاء</button>
+                </div>
+                <p style="margin-top:15px; font-size:12px; color:#666">كلمة المرور الافتراضية: <code>admin123</code></p>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('calculator')">📊 حاسبة التسعير</button>
+            <button class="tab" onclick="showTab('proposals')">📄 العروض (<span id="proposalCount">0</span>)</button>
+            <button class="tab" id="dashboardTab" style="display:none" onclick="showTab('dashboard')">📈 لوحة المعلومات</button>
+            <button class="tab" id="settingsTab" style="display:none" onclick="showTab('settings')">⚙️ الإعدادات</button>
+        </div>
+
+        <!-- Calculator Tab -->
+        <div class="tab-content active" id="calculator">
+            <div class="grid">
+                <div class="card">
+                    <h2>معلومات العميل</h2>
+                    <div style="display:flex; flex-direction:column; gap:15px">
+                        <div>
+                            <label>اسم العميل</label>
+                            <input type="text" id="clientName" placeholder="أدخل اسم العميل">
+                        </div>
+                        <div>
+                            <label>حجم الإيرادات (مليون ريال)</label>
+                            <input type="number" id="clientRevenue" placeholder="مثال: 35" oninput="suggestHours()">
+                        </div>
+                        <div class="grid-2">
+                            <div>
+                                <label>نوع النشاط</label>
+                                <select id="clientSector">
+                                    <option>تجاري</option>
+                                    <option>صناعي</option>
+                                    <option>خدمي</option>
+                                    <option>مالي</option>
+                                    <option>أخرى</option>
+                                </select>
                             </div>
-                        )}
-
-                        {activeTab === 'dashboard' && isAdmin && (
-                            <div className="space-y-6">
-                                <div className="grid md:grid-cols-3 gap-4">
-                                    <div className="bg-white rounded-lg shadow-lg p-6">
-                                        <div className="text-sm text-gray-600 mb-1">إجمالي العروض</div>
-                                        <div className="text-3xl font-bold text-gray-800">{stats.totalProposals}</div>
-                                    </div>
-                                    <div className="bg-white rounded-lg shadow-lg p-6">
-                                        <div className="text-sm text-gray-600 mb-1">معدل القبول</div>
-                                        <div className="text-3xl font-bold text-green-600">{stats.winRate.toFixed(1)}%</div>
-                                    </div>
-                                    <div className="bg-white rounded-lg shadow-lg p-6">
-                                        <div className="text-sm text-gray-600 mb-1">متوسط هامش الربح</div>
-                                        <div className="text-3xl font-bold text-orange-600">{stats.avgProfit.toFixed(1)}%</div>
-                                    </div>
-                                </div>
-
-                                <div className="bg-white rounded-lg shadow-lg p-6">
-                                    <h3 className="text-xl font-bold mb-4">حالة العروض</h3>
-                                    <div className="space-y-3">
-                                        {['مقبول', 'مرفوض', 'قيد الدراسة'].map(status => {
-                                            const count = proposals.filter(p => p.status === status).length;
-                                            const percentage = proposals.length > 0 ? (count / proposals.length) * 100 : 0;
-                                            return (
-                                                <div key={status}>
-                                                    <div className="flex justify-between mb-1 text-sm">
-                                                        <span>{status}</span>
-                                                        <span className="font-bold">{count} ({percentage.toFixed(0)}%)</span>
-                                                    </div>
-                                                    <div className="w-full bg-gray-200 rounded-full h-2">
-                                                        <div className={`h-2 rounded-full ${status === 'مقبول' ? 'bg-green-500' : status === 'مرفوض' ? 'bg-red-500' : 'bg-yellow-500'}`} style={{ width: `${percentage}%` }} />
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-
-                                <div className="bg-white rounded-lg shadow-lg p-6 overflow-x-auto">
-                                    <h3 className="text-xl font-bold mb-4">أحدث العروض</h3>
-                                    <table className="w-full text-sm">
-                                        <thead className="bg-gray-100">
-                                            <tr>
-                                                <th className="px-3 py-2 text-right">العميل</th>
-                                                <th className="px-3 py-2 text-right">المستخدم</th>
-                                                <th className="px-3 py-2 text-right">السعر</th>
-                                                <th className="px-3 py-2 text-right">الحالة</th>
-                                                <th className="px-3 py-2 text-right">التاريخ</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {proposals.slice().reverse().slice(0, 10).map(prop => (
-                                                <tr key={prop.id} className="border-b">
-                                                    <td className="px-3 py-2">{prop.name}</td>
-                                                    <td className="px-3 py-2">{prop.createdBy}</td>
-                                                    <td className="px-3 py-2 font-bold">{prop.proposedPrice.toFixed(0)}</td>
-                                                    <td className="px-3 py-2">
-                                                        <span className={`px-2 py-1 rounded text-xs ${prop.status === 'مقبول' ? 'bg-green-100 text-green-700' : prop.status === 'مرفوض' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                                            {prop.status}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-3 py-2">{prop.date}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                            <div>
+                                <label>مستوى التعقيد</label>
+                                <select id="clientComplexity">
+                                    <option>بسيط</option>
+                                    <option selected>متوسط</option>
+                                    <option>معقد</option>
+                                </select>
                             </div>
-                        )}
-
-                        {activeTab === 'settings' && isAdmin && (
-                            <div className="bg-white rounded-lg shadow-lg p-6">
-                                <h2 className="text-xl font-bold mb-6">إعدادات التكاليف</h2>
-                                
-                                <div className="mb-8 p-4 bg-yellow-50 rounded-lg border-2 border-yellow-300">
-                                    <h3 className="text-lg font-bold mb-3 text-yellow-800">تغيير كلمة مرور المدير</h3>
-                                    <div className="flex gap-3">
-                                        <input type="text" id="newPassword" className="flex-1 px-3 py-2 border rounded" placeholder="كلمة المرور الجديدة" />
-                                        <button onClick={() => {
-                                            const np = document.getElementById('newPassword').value;
-                                            if (np && np.length >= 4) {
-                                                saveAdminPassword(np);
-                                                document.getElementById('newPassword').value = '';
-                                            } else {
-                                                alert('كلمة المرور 4 أحرف على الأقل');
-                                            }
-                                        }} className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700">
-                                            تغيير
-                                        </button>
-                                    </div>
+                        </div>
+                        <div style="background:#eff6ff; padding:20px; border-radius:10px">
+                            <h3 style="margin-bottom:15px; color:#1e40af">الساعات المتوقعة</h3>
+                            <div class="grid-2">
+                                <div>
+                                    <label>ساعات الشريك</label>
+                                    <input type="number" id="partnerHours" value="0">
                                 </div>
-
-                                <div className="mb-8">
-                                    <h3 className="text-lg font-bold mb-4">الرواتب</h3>
-                                    <div className="grid md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-semibold mb-2">راتب موظف 1 (شهري)</label>
-                                            <input type="number" value={settings.employee1Salary} onChange={(e) => setSettings({...settings, employee1Salary: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold mb-2">ساعات العمل السنوية - موظف 1</label>
-                                            <input type="number" value={settings.employee1Hours} onChange={(e) => setSettings({...settings, employee1Hours: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold mb-2">راتب موظف 2 (شهري)</label>
-                                            <input type="number" value={settings.employee2Salary} onChange={(e) => setSettings({...settings, employee2Salary: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold mb-2">ساعات العمل السنوية - موظف 2</label>
-                                            <input type="number" value={settings.employee2Hours} onChange={(e) => setSettings({...settings, employee2Hours: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded" />
-                                        </div>
-                                    </div>
+                                <div>
+                                    <label>ساعات موظف 1</label>
+                                    <input type="number" id="emp1Hours" value="0">
                                 </div>
-
-                                <div className="mb-8 p-4 bg-blue-50 rounded-lg">
-                                    <h3 className="text-lg font-bold mb-4">إعدادات الشريك</h3>
-                                    <label className="flex items-center gap-3 mb-4">
-                                        <input type="checkbox" checked={settings.partnerCostEnabled} onChange={(e) => setSettings({...settings, partnerCostEnabled: e.target.checked})} className="w-4 h-4" />
-                                        <span className="font-semibold">احتساب تكلفة افتراضية لساعة الشريك</span>
-                                    </label>
-                                    {settings.partnerCostEnabled && (
-                                        <div className="grid md:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-sm mb-2">التكلفة (ريال/ساعة)</label>
-                                                <input type="number" value={settings.partnerCostPerHour} onChange={(e) => setSettings({...settings, partnerCostPerHour: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded" />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm mb-2">نسبة ساعات الشريك (%)</label>
-                                                <input type="number" value={settings.partnerPercentage} onChange={(e) => setSettings({...settings, partnerPercentage: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded" />
-                                            </div>
-                                        </div>
-                                    )}
+                                <div>
+                                    <label>ساعات موظف 2</label>
+                                    <input type="number" id="emp2Hours" value="0">
                                 </div>
-
-                                <div className="mb-8">
-                                    <h3 className="text-lg font-bold mb-4">التكاليف الشهرية (ريال)</h3>
-                                    <div className="grid md:grid-cols-3 gap-4">
-                                        {[
-                                            {key: 'monthlyBenefits', label: 'منافع الموظفين'},
-                                            {key: 'monthlyPhone', label: 'هاتف'},
-                                            {key: 'monthlyElectricity', label: 'كهرباء'},
-                                            {key: 'monthlyWater', label: 'مياه'},
-                                            {key: 'monthlyGovernment', label: 'مصاريف حكومية'},
-                                            {key: 'monthlyHospitality', label: 'ضيافة'},
-                                            {key: 'monthlySupplies', label: 'مواد استهلاكية'},
-                                            {key: 'monthlyStationery', label: 'قرطاسية'},
-                                            {key: 'monthlyMisc', label: 'متنوعة'}
-                                        ].map(item => (
-                                            <div key={item.key}>
-                                                <label className="block text-sm mb-1">{item.label}</label>
-                                                <input type="number" value={settings[item.key]} onChange={(e) => setSettings({...settings, [item.key]: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded text-sm" />
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="mb-8">
-                                    <h3 className="text-lg font-bold mb-4">تكاليف أخرى</h3>
-                                    <div className="grid md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm mb-2">إيجار (نصف سنوي)</label>
-                                            <input type="number" value={settings.semiAnnualRent} onChange={(e) => setSettings({...settings, semiAnnualRent: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm mb-2">برامج وتقنية (سنوي)</label>
-                                            <input type="number" value={settings.annualSoftware} onChange={(e) => setSettings({...settings, annualSoftware: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm mb-2">رخص عمل (سنوي)</label>
-                                            <input type="number" value={settings.annualLicenses} onChange={(e) => setSettings({...settings, annualLicenses: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm mb-2">SOCPA (سنوي)</label>
-                                            <input type="number" value={settings.annualSOCPA} onChange={(e) => setSettings({...settings, annualSOCPA: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm mb-2">تسويق (سنوي)</label>
-                                            <input type="number" value={settings.annualMarketing} onChange={(e) => setSettings({...settings, annualMarketing: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm mb-2">إهلاك (شهري)</label>
-                                            <input type="number" value={settings.monthlyDepreciation} onChange={(e) => setSettings({...settings, monthlyDepreciation: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded" />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <button onClick={saveSettings} className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 mb-8">
-                                    💾 حفظ الإعدادات
-                                </button>
-
-                                <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
-                                    <h3 className="text-lg font-bold mb-4">ملخص التكاليف</h3>
-                                    <div className="grid md:grid-cols-2 gap-4">
-                                        <div className="bg-white p-4 rounded-lg shadow">
-                                            <div className="text-sm text-gray-600 mb-1">التكاليف الشهرية</div>
-                                            <div className="text-2xl font-bold text-blue-600">{costs.totalMonthly.toFixed(0)} ريال</div>
-                                        </div>
-                                        <div className="bg-white p-4 rounded-lg shadow">
-                                            <div className="text-sm text-gray-600 mb-1">التكاليف السنوية</div>
-                                            <div className="text-2xl font-bold text-blue-600">{costs.totalAnnual.toFixed(0)} ريال</div>
-                                        </div>
-                                        <div className="bg-white p-4 rounded-lg shadow">
-                                            <div className="text-sm text-gray-600 mb-1">تكلفة ساعة موظف 1</div>
-                                            <div className="text-2xl font-bold text-green-600">{costs.employee1.toFixed(0)} ريال</div>
-                                        </div>
-                                        <div className="bg-white p-4 rounded-lg shadow">
-                                            <div className="text-sm text-gray-600 mb-1">تكلفة ساعة موظف 2</div>
-                                            <div className="text-2xl font-bold text-green-600">{costs.employee2.toFixed(0)} ريال</div>
-                                        </div>
-                                    </div>
+                                <div>
+                                    <label>الإجمالي</label>
+                                    <input type="number" id="totalHours" value="0" readonly style="background:#f3f4f6">
                                 </div>
                             </div>
-                        )}
+                        </div>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="hasCollaborators" onchange="toggleCollaborators()">
+                            <span>يوجد متعاونين</span>
+                        </label>
+                        <div id="collaboratorRate" style="display:none">
+                            <label>نسبة المتعاونين (%)</label>
+                            <input type="number" id="collabRate" value="20">
+                        </div>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="hasCommission" onchange="toggleCommission()">
+                            <span>يوجد عمولة جلب عميل</span>
+                        </label>
+                        <div id="commissionRate" style="display:none">
+                            <label>نسبة العمولة (%)</label>
+                            <input type="number" id="commRate" value="15">
+                        </div>
+                        <div>
+                            <label>هامش الربح المستهدف (%)</label>
+                            <input type="number" id="targetMargin" value="35">
+                        </div>
+                        <button class="btn" onclick="calculate()">احسب السعر</button>
                     </div>
                 </div>
-            );
-        };
+                <div class="card">
+                    <h2>النتائج</h2>
+                    <div id="results"></div>
+                </div>
+            </div>
+        </div>
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<AuditPricingSystem />);
+        <!-- Proposals Tab -->
+        <div class="tab-content" id="proposals">
+            <div class="card">
+                <h2>العروض المقدمة</h2>
+                <div id="proposalsList"></div>
+            </div>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div class="tab-content" id="dashboard">
+            <div class="card">
+                <h2>لوحة المعلومات</h2>
+                <div class="stats-grid" id="dashboardStats"></div>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div class="tab-content" id="settings">
+            <div class="card">
+                <h2>إعدادات التكاليف</h2>
+                
+                <div class="alert alert-warning">
+                    <strong>تغيير كلمة مرور المدير</strong>
+                    <div style="display:flex; gap:10px; margin-top:10px">
+                        <input type="text" id="newPassword" placeholder="كلمة المرور الجديدة">
+                        <button class="btn" onclick="changePassword()">تغيير</button>
+                    </div>
+                </div>
+
+                <h3 style="margin:25px 0 15px 0">الرواتب</h3>
+                <div class="grid-2">
+                    <div>
+                        <label>راتب موظف 1 (شهري)</label>
+                        <input type="number" id="emp1Salary" value="8000">
+                    </div>
+                    <div>
+                        <label>ساعات العمل السنوية - موظف 1</label>
+                        <input type="number" id="emp1HoursYear" value="1400">
+                    </div>
+                    <div>
+                        <label>راتب موظف 2 (شهري)</label>
+                        <input type="number" id="emp2Salary" value="8000">
+                    </div>
+                    <div>
+                        <label>ساعات العمل السنوية - موظف 2</label>
+                        <input type="number" id="emp2HoursYear" value="1400">
+                    </div>
+                </div>
+
+                <div style="background:#eff6ff; padding:20px; border-radius:10px; margin:25px 0">
+                    <h3 style="margin-bottom:15px">إعدادات الشريك</h3>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="partnerEnabled" checked>
+                        <span>احتساب تكلفة افتراضية لساعة الشريك</span>
+                    </label>
+                    <div class="grid-2" style="margin-top:15px">
+                        <div>
+                            <label>التكلفة (ريال/ساعة)</label>
+                            <input type="number" id="partnerCost" value="500">
+                        </div>
+                        <div>
+                            <label>نسبة ساعات الشريك (%)</label>
+                            <input type="number" id="partnerPercent" value="7">
+                        </div>
+                    </div>
+                </div>
+
+                <h3 style="margin:25px 0 15px 0">التكاليف الشهرية</h3>
+                <div class="grid-2">
+                    <div><label>منافع الموظفين</label><input type="number" id="costBenefits" value="2000"></div>
+                    <div><label>هاتف</label><input type="number" id="costPhone" value="500"></div>
+                    <div><label>كهرباء</label><input type="number" id="costElec" value="800"></div>
+                    <div><label>مياه</label><input type="number" id="costWater" value="300"></div>
+                    <div><label>مصاريف حكومية</label><input type="number" id="costGov" value="1000"></div>
+                    <div><label>ضيافة</label><input type="number" id="costHosp" value="500"></div>
+                    <div><label>مواد استهلاكية</label><input type="number" id="costSupp" value="800"></div>
+                    <div><label>قرطاسية</label><input type="number" id="costStat" value="300"></div>
+                    <div><label>متنوعة</label><input type="number" id="costMisc" value="1000"></div>
+                </div>
+
+                <h3 style="margin:25px 0 15px 0">تكاليف أخرى</h3>
+                <div class="grid-2">
+                    <div><label>إيجار (نصف سنوي)</label><input type="number" id="costRent" value="60000"></div>
+                    <div><label>برامج (سنوي)</label><input type="number" id="costSoft" value="12000"></div>
+                    <div><label>رخص (سنوي)</label><input type="number" id="costLic" value="5000"></div>
+                    <div><label>SOCPA (سنوي)</label><input type="number" id="costSOCPA" value="3000"></div>
+                    <div><label>تسويق (سنوي)</label><input type="number" id="costMark" value="10000"></div>
+                    <div><label>إهلاك (شهري)</label><input type="number" id="costDepr" value="1600"></div>
+                </div>
+
+                <button class="btn btn-success" onclick="saveSettings()" style="margin-top:25px">💾 حفظ الإعدادات</button>
+
+                <div id="costSummary" style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding:25px; border-radius:12px; margin-top:30px; color:white"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isAdmin = false;
+        let adminPassword = localStorage.getItem('adminPassword') || 'admin123';
+        let employeeName = localStorage.getItem('employeeName') || '';
+        let proposals = JSON.parse(localStorage.getItem('proposals') || '[]');
+        
+        // Initialize
+        updateProposalCount();
+        loadSettings();
+        if (employeeName) document.getElementById('userDisplay').innerHTML = `<span class="user-badge">المستخدم: ${employeeName}</span>`;
+        
+        function showTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(tab).classList.add('active');
+            if (tab === 'proposals') loadProposals();
+            if (tab === 'dashboard') loadDashboard();
+            if (tab === 'settings') updateCostSummary();
+        }
+        
+        function showLogin() {
+            document.getElementById('loginOverlay').style.display = 'flex';
+            document.getElementById('passwordInput').focus();
+        }
+        
+        function hideLogin() {
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('passwordInput').value = '';
+        }
+        
+        function login() {
+            const pass = document.getElementById('passwordInput').value;
+            if (pass === adminPassword) {
+                isAdmin = true;
+                hideLogin();
+                document.getElementById('adminBtn').style.display = 'none';
+                document.getElementById('logoutBtn').style.display = 'inline-block';
+                document.getElementById('dashboardTab').style.display = 'block';
+                document.getElementById('settingsTab').style.display = 'block';
+                document.getElementById('userDisplay').innerHTML = '<span class="admin-badge">👑 مدير النظام</span>';
+                alert('تم تسجيل الدخول ✓');
+            } else {
+                alert('كلمة المرور غير صحيحة!');
+            }
+        }
+        
+        function logout() {
+            isAdmin = false;
+            document.getElementById('adminBtn').style.display = 'inline-block';
+            document.getElementById('logoutBtn').style.display = 'none';
+            document.getElementById('dashboardTab').style.display = 'none';
+            document.getElementById('settingsTab').style.display = 'none';
+            if (employeeName) document.getElementById('userDisplay').innerHTML = `<span class="user-badge">المستخدم: ${employeeName}</span>`;
+            showTab('calculator');
+        }
+        
+        function toggleCollaborators() {
+            document.getElementById('collaboratorRate').style.display = 
+                document.getElementById('hasCollaborators').checked ? 'block' : 'none';
+        }
+        
+        function toggleCommission() {
+            document.getElementById('commissionRate').style.display = 
+                document.getElementById('hasCommission').checked ? 'block' : 'none';
+        }
+        
+        function suggestHours() {
+            const rev = parseFloat(document.getElementById('clientRevenue').value) || 0;
+            let total = rev <= 5 ? 50 : rev <= 10 ? 80 : rev <= 25 ? 120 : rev <= 50 ? 180 : rev <= 75 ? 240 : 300;
+            const partnerPercent = parseFloat(document.getElementById('partnerPercent').value) || 7;
+            const partner = Math.round(total * (partnerPercent / 100));
+            const remaining = total - partner;
+            const emp1 = Math.round(remaining * 0.55);
+            const emp2 = remaining - emp1;
+            
+            document.getElementById('partnerHours').value = partner;
+            document.getElementById('emp1Hours').value = emp1;
+            document.getElementById('emp2Hours').value = emp2;
+            updateTotalHours();
+        }
+        
+        function updateTotalHours() {
+            const p = parseFloat(document.getElementById('partnerHours').value) || 0;
+            const e1 = parseFloat(document.getElementById('emp1Hours').value) || 0;
+            const e2 = parseFloat(document.getElementById('emp2Hours').value) || 0;
+            document.getElementById('totalHours').value = p + e1 + e2;
+        }
+        
+        document.getElementById('partnerHours').addEventListener('input', updateTotalHours);
+        document.getElementById('emp1Hours').addEventListener('input', updateTotalHours);
+        document.getElementById('emp2Hours').addEventListener('input', updateTotalHours);
+        
+        function calculate() {
+            const name = document.getElementById('clientName').value;
+            const revenue = document.getElementById('clientRevenue').value;
+            
+            if (!name || !revenue) {
+                alert('الرجاء إدخال اسم العميل وحجم الإيرادات');
+                return;
+            }
+            
+            // Get costs
+            const emp1Sal = parseFloat(document.getElementById('emp1Salary').value) || 0;
+            const emp2Sal = parseFloat(document.getElementById('emp2Salary').value) || 0;
+            const emp1HY = parseFloat(document.getElementById('emp1HoursYear').value) || 1400;
+            const emp2HY = parseFloat(document.getElementById('emp2HoursYear').value) || 1400;
+            
+            const monthly = 
+                (parseFloat(document.getElementById('costBenefits').value) || 0) +
+                (parseFloat(document.getElementById('costPhone').value) || 0) +
+                (parseFloat(document.getElementById('costElec').value) || 0) +
+                (parseFloat(document.getElementById('costWater').value) || 0) +
+                (parseFloat(document.getElementById('costGov').value) || 0) +
+                (parseFloat(document.getElementById('costHosp').value) || 0) +
+                (parseFloat(document.getElementById('costSupp').value) || 0) +
+                (parseFloat(document.getElementById('costStat').value) || 0) +
+                (parseFloat(document.getElementById('costMisc').value) || 0) +
+                (parseFloat(document.getElementById('costDepr').value) || 0) +
+                ((parseFloat(document.getElementById('costRent').value) || 0) / 6) +
+                (((parseFloat(document.getElementById('costSoft').value) || 0) +
+                  (parseFloat(document.getElementById('costLic').value) || 0) +
+                  (parseFloat(document.getElementById('costSOCPA').value) || 0) +
+                  (parseFloat(document.getElementById('costMark').value) || 0)) / 12);
+            
+            const annual = monthly * 12;
+            const overhead = annual / 2;
+            
+            const emp1Cost = ((emp1Sal * 12) + overhead) / emp1HY;
+            const emp2Cost = ((emp2Sal * 12) + overhead) / emp2HY;
+            const partnerCostPerHour = parseFloat(document.getElementById('partnerCost').value) || 500;
+            
+            // Get hours
+            const partnerHours = parseFloat(document.getElementById('partnerHours').value) || 0;
+            const emp1Hours = parseFloat(document.getElementById('emp1Hours').value) || 0;
+            const emp2Hours = parseFloat(document.getElementById('emp2Hours').value) || 0;
+            
+            const partnerEnabled = document.getElementById('partnerEnabled').checked;
+            const pCost = partnerEnabled ? partnerHours * partnerCostPerHour : 0;
+            const e1Cost = emp1Hours * emp1Cost;
+            const e2Cost = emp2Hours * emp2Cost;
+            const hoursCost = pCost + e1Cost + e2Cost;
+            
+            const targetMargin = parseFloat(document.getElementById('targetMargin').value) || 35;
+            const priceBeforeVar = hoursCost / (1 - targetMargin / 100);
+            
+            const hasCollab = document.getElementById('hasCollaborators').checked;
+            const hasComm = document.getElementById('hasCommission').checked;
+            const collabRate = parseFloat(document.getElementById('collabRate').value) || 0;
+            const commRate = parseFloat(document.getElementById('commRate').value) || 0;
+            
+            const varRate = (hasCollab ? collabRate / 100 : 0) + (hasComm ? commRate / 100 : 0);
+            const finalPrice = priceBeforeVar / (1 - varRate);
+            
+            const collabCost = hasCollab ? finalPrice * (collabRate / 100) : 0;
+            const commCost = hasComm ? finalPrice * (commRate / 100) : 0;
+            const totalCost = hoursCost + collabCost + commCost;
+            const profit = finalPrice - totalCost;
+            const profitMargin = (profit / finalPrice) * 100;
+            
+            // Display results
+            document.getElementById('results').innerHTML = `
+                <div class="result-box">
+                    <h3 style="margin-bottom:20px; font-size:20px">💰 نتائج التسعير</h3>
+                    <div class="result-item">
+                        <span class="result-label">تكلفة الساعات:</span>
+                        <span class="result-value">${hoursCost.toFixed(0)} ريال</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">تكلفة المتعاونين (${collabRate}%):</span>
+                        <span class="result-value">${collabCost.toFixed(0)} ريال</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">تكلفة العمولات (${commRate}%):</span>
+                        <span class="result-value">${commCost.toFixed(0)} ريال</span>
+                    </div>
+                    <div class="result-item" style="border-top:2px solid rgba(255,255,255,0.4); padding-top:15px; margin-top:10px">
+                        <span class="result-label">إجمالي التكلفة:</span>
+                        <span class="result-value" style="color:#fca5a5">${totalCost.toFixed(0)} ريال</span>
+                    </div>
+                    <div class="result-item" style="font-size:22px">
+                        <span class="result-label">السعر المقترح:</span>
+                        <span class="result-value" style="color:#86efac">${finalPrice.toFixed(0)} ريال</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">صافي الربح:</span>
+                        <span class="result-value">${profit.toFixed(0)} ريال</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">هامش الربح:</span>
+                        <span class="result-value">${profitMargin.toFixed(1)}%</span>
+                    </div>
+                </div>
+                <button class="btn btn-success" onclick="saveProposal()" style="width:100%; margin-top:20px">💾 حفظ العرض</button>
+            `;
+            
+            // Store calculation
+            window.lastCalculation = {
+                name, revenue,
+                sector: document.getElementById('clientSector').value,
+                complexity: document.getElementById('clientComplexity').value,
+                finalPrice, totalCost, profit, profitMargin,
+                partnerHours, emp1Hours, emp2Hours,
+                hasCollab, collabRate, hasComm, commRate
+            };
+        }
+        
+        function saveProposal() {
+            if (!window.lastCalculation) {
+                alert('الرجاء حساب السعر أولاً');
+                return;
+            }
+            
+            if (!employeeName) {
+                const name = prompt('الرجاء إدخال اسمك:');
+                if (!name) return;
+                employeeName = name;
+                localStorage.setItem('employeeName', name);
+                document.getElementById('userDisplay').innerHTML = `<span class="user-badge">المستخدم: ${name}</span>`;
+            }
+            
+            const proposal = {
+                id: Date.now(),
+                ...window.lastCalculation,
+                createdBy: employeeName,
+                date: new Date().toLocaleDateString('ar-SA'),
+                status: 'قيد الدراسة',
+                competitorPrice: '',
+                competitorName: '',
+                rejectionReason: ''
+            };
+            
+            proposals.push(proposal);
+            localStorage.setItem('proposals', JSON.stringify(proposals));
+            updateProposalCount();
+            alert('تم حفظ العرض بنجاح ✓');
+        }
+        
+        function updateProposalCount() {
+            document.getElementById('proposalCount').textContent = proposals.length;
+        }
+        
+        function loadProposals() {
+            if (proposals.length === 0) {
+                document.getElementById('proposalsList').innerHTML = '<p style="text-align:center; color:#999; padding:50px">لا توجد عروض محفوظة</p>';
+                return;
+            }
+            
+            let html = '';
+            proposals.slice().reverse().forEach(p => {
+                html += `
+                    <div class="proposal-card">
+                        <div class="proposal-header">
+                            <div>
+                                <div class="proposal-name">${p.name}</div>
+                                <div class="proposal-meta">${p.revenue}م - ${p.sector} - ${p.complexity}</div>
+                                <div class="proposal-meta">بواسطة: ${p.createdBy} | ${p.date}</div>
+                            </div>
+                            ${isAdmin ? `<button class="btn btn-danger" onclick="deleteProposal(${p.id})">🗑️</button>` : ''}
+                        </div>
+                        <div class="grid-2">
+                            <div style="background:#dbeafe; padding:15px; border-radius:8px">
+                                <div style="font-size:12px; color:#1e40af">السعر المعروض</div>
+                                <div style="font-size:20px; font-weight:700; color:#1e40af">${p.finalPrice.toFixed(0)} ر.س</div>
+                            </div>
+                            <div style="background:#fee2e2; padding:15px; border-radius:8px">
+                                <div style="font-size:12px; color:#991b1b">التكلفة</div>
+                                <div style="font-size:20px; font-weight:700; color:#991b1b">${p.totalCost.toFixed(0)} ر.س</div>
+                            </div>
+                            <div style="background:#d1fae5; padding:15px; border-radius:8px">
+                                <div style="font-size:12px; color:#065f46">الربح</div>
+                                <div style="font-size:20px; font-weight:700; color:#065f46">${p.profit.toFixed(0)} ر.س</div>
+                            </div>
+                            <div style="background:#e9d5ff; padding:15px; border-radius:8px">
+                                <div style="font-size:12px; color:#581c87">الهامش</div>
+                                <div style="font-size:20px; font-weight:700; color:#581c87">${p.profitMargin.toFixed(1)}%</div>
+                            </div>
+                        </div>
+                        <div class="grid-2" style="margin-top:15px">
+                            <div>
+                                <label style="font-size:12px">الحالة</label>
+                                <select onchange="updateProposal(${p.id}, 'status', this.value)" style="padding:8px; font-size:13px">
+                                    <option ${p.status === 'قيد الدراسة' ? 'selected' : ''}>قيد الدراسة</option>
+                                    <option ${p.status === 'مقبول' ? 'selected' : ''}>مقبول</option>
+                                    <option ${p.status === 'مرفوض' ? 'selected' : ''}>مرفوض</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-size:12px">سعر المنافس</label>
+                                <input type="number" value="${p.competitorPrice}" onchange="updateProposal(${p.id}, 'competitorPrice', this.value)" placeholder="اختياري" style="padding:8px; font-size:13px">
+                            </div>
+                        </div>
+                        ${p.status === 'مرفوض' ? `
+                            <div style="margin-top:10px">
+                                <label style="font-size:12px">سبب الرفض</label>
+                                <select onchange="updateProposal(${p.id}, 'rejectionReason', this.value)" style="padding:8px; font-size:13px">
+                                    <option value="">اختر السبب</option>
+                                    <option ${p.rejectionReason === 'السعر مرتفع' ? 'selected' : ''}>السعر مرتفع</option>
+                                    <option ${p.rejectionReason === 'اختاروا منافس' ? 'selected' : ''}>اختاروا منافس</option>
+                                    <option ${p.rejectionReason === 'تأجيل' ? 'selected' : ''}>تأجيل</option>
+                                    <option ${p.rejectionReason === 'أخرى' ? 'selected' : ''}>أخرى</option>
+                                </select>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+            
+            document.getElementById('proposalsList').innerHTML = html;
+        }
+        
+        function updateProposal(id, field, value) {
+            const index = proposals.findIndex(p => p.id === id);
+            if (index !== -1) {
+                proposals[index][field] = value;
+                localStorage.setItem('proposals', JSON.stringify(proposals));
+                loadProposals();
+            }
+        }
+        
+        function deleteProposal(id) {
+            if (!isAdmin) {
+                alert('صلاحيات المدير فقط!');
+                return;
+            }
+            if (confirm('هل أنت متأكد من حذف العرض؟')) {
+                proposals = proposals.filter(p => p.id !== id);
+                localStorage.setItem('proposals', JSON.stringify(proposals));
+                updateProposalCount();
+                loadProposals();
+            }
+        }
+        
+        function loadDashboard() {
+            const total = proposals.length;
+            const accepted = proposals.filter(p => p.status === 'مقبول').length;
+            const rejected = proposals.filter(p => p.status === 'مرفوض').length;
+            const pending = proposals.filter(p => p.status === 'قيد الدراسة').length;
+            const winRate = total > 0 ? (accepted / total * 100).toFixed(1) : 0;
+            const avgProfit = proposals.length > 0 ? (proposals.reduce((s, p) => s + p.profitMargin, 0) / proposals.length).toFixed(1) : 0;
+            
+            document.getElementById('dashboardStats').innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-label">إجمالي العروض</div>
+                    <div class="stat-value">${total}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">معدل القبول</div>
+                    <div class="stat-value" style="color:#10b981">${winRate}%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">متوسط هامش الربح</div>
+                    <div class="stat-value" style="color:#f59e0b">${avgProfit}%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">العروض المقبولة</div>
+                    <div class="stat-value" style="color:#10b981">${accepted}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">العروض المرفوضة</div>
+                    <div class="stat-value" style="color:#ef4444">${rejected}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">قيد الدراسة</div>
+                    <div class="stat-value" style="color:#f59e0b">${pending}</div>
+                </div>
+            `;
+        }
+        
+        function loadSettings() {
+            const saved = localStorage.getItem('settings');
+            if (saved) {
+                const settings = JSON.parse(saved);
+                Object.keys(settings).forEach(key => {
+                    const el = document.getElementById(key);
+                    if (el) {
+                        if (el.type === 'checkbox') el.checked = settings[key];
+                        else el.value = settings[key];
+                    }
+                });
+            }
+        }
+        
+        function saveSettings() {
+            const settings = {
+                emp1Salary: document.getElementById('emp1Salary').value,
+                emp2Salary: document.getElementById('emp2Salary').value,
+                emp1HoursYear: document.getElementById('emp1HoursYear').value,
+                emp2HoursYear: document.getElementById('emp2HoursYear').value,
+                partnerEnabled: document.getElementById('partnerEnabled').checked,
+                partnerCost: document.getElementById('partnerCost').value,
+                partnerPercent: document.getElementById('partnerPercent').value,
+                costBenefits: document.getElementById('costBenefits').value,
+                costPhone: document.getElementById('costPhone').value,
+                costElec: document.getElementById('costElec').value,
+                costWater: document.getElementById('costWater').value,
+                costGov: document.getElementById('costGov').value,
+                costHosp: document.getElementById('costHosp').value,
+                costSupp: document.getElementById('costSupp').value,
+                costStat: document.getElementById('costStat').value,
+                costMisc: document.getElementById('costMisc').value,
+                costRent: document.getElementById('costRent').value,
+                costSoft: document.getElementById('costSoft').value,
+                costLic: document.getElementById('costLic').value,
+                costSOCPA: document.getElementById('costSOCPA').value,
+                costMark: document.getElementById('costMark').value,
+                costDepr: document.getElementById('costDepr').value
+            };
+            
+            localStorage.setItem('settings', JSON.stringify(settings));
+            updateCostSummary();
+            alert('تم حفظ الإعدادات بنجاح ✓');
+        }
+        
+        function updateCostSummary() {
+            const emp1Sal = parseFloat(document.getElementById('emp1Salary').value) || 0;
+            const emp2Sal = parseFloat(document.getElementById('emp2Salary').value) || 0;
+            const emp1HY = parseFloat(document.getElementById('emp1HoursYear').value) || 1400;
+            const emp2HY = parseFloat(document.getElementById('emp2HoursYear').value) || 1400;
+            
+            const monthly = 
+                (parseFloat(document.getElementById('costBenefits').value) || 0) +
+                (parseFloat(document.getElementById('costPhone').value) || 0) +
+                (parseFloat(document.getElementById('costElec').value) || 0) +
+                (parseFloat(document.getElementById('costWater').value) || 0) +
+                (parseFloat(document.getElementById('costGov').value) || 0) +
+                (parseFloat(document.getElementById('costHosp').value) || 0) +
+                (parseFloat(document.getElementById('costSupp').value) || 0) +
+                (parseFloat(document.getElementById('costStat').value) || 0) +
+                (parseFloat(document.getElementById('costMisc').value) || 0) +
+                (parseFloat(document.getElementById('costDepr').value) || 0) +
+                ((parseFloat(document.getElementById('costRent').value) || 0) / 6) +
+                (((parseFloat(document.getElementById('costSoft').value) || 0) +
+                  (parseFloat(document.getElementById('costLic').value) || 0) +
+                  (parseFloat(document.getElementById('costSOCPA').value) || 0) +
+                  (parseFloat(document.getElementById('costMark').value) || 0)) / 12);
+            
+            const annual = monthly * 12;
+            const overhead = annual / 2;
+            const emp1Cost = ((emp1Sal * 12) + overhead) / emp1HY;
+            const emp2Cost = ((emp2Sal * 12) + overhead) / emp2HY;
+            
+            document.getElementById('costSummary').innerHTML = `
+                <h3 style="margin-bottom:20px; font-size:20px">📊 ملخص التكاليف</h3>
+                <div class="grid-2">
+                    <div style="background:rgba(255,255,255,0.2); padding:20px; border-radius:10px">
+                        <div style="font-size:14px; margin-bottom:5px">التكاليف الشهرية</div>
+                        <div style="font-size:28px; font-weight:700">${monthly.toFixed(0)} ريال</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.2); padding:20px; border-radius:10px">
+                        <div style="font-size:14px; margin-bottom:5px">التكاليف السنوية</div>
+                        <div style="font-size:28px; font-weight:700">${annual.toFixed(0)} ريال</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.2); padding:20px; border-radius:10px">
+                        <div style="font-size:14px; margin-bottom:5px">تكلفة ساعة موظف 1</div>
+                        <div style="font-size:28px; font-weight:700">${emp1Cost.toFixed(0)} ريال</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.2); padding:20px; border-radius:10px">
+                        <div style="font-size:14px; margin-bottom:5px">تكلفة ساعة موظف 2</div>
+                        <div style="font-size:28px; font-weight:700">${emp2Cost.toFixed(0)} ريال</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function changePassword() {
+            const newPass = document.getElementById('newPassword').value;
+            if (newPass && newPass.length >= 4) {
+                localStorage.setItem('adminPassword', newPass);
+                adminPassword = newPass;
+                document.getElementById('newPassword').value = '';
+                alert('تم تغيير كلمة المرور بنجاح ✓');
+            } else {
+                alert('كلمة المرور يجب أن تكون 4 أحرف على الأقل');
+            }
+        }
+        
+        // Enter key login
+        document.getElementById('passwordInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') login();
+        });
     </script>
 </body>
 </html>
