@@ -1,440 +1,279 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام تسعير خدمات المراجعة</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body>
-    <div id="root"></div>
-
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-    <script>
-        window.storage = {
-            get: async (key) => {
-                const value = localStorage.getItem(key);
-                return value ? { key, value } : null;
-            },
-            set: async (key, value) => {
-                localStorage.setItem(key, value);
-                return { key, value };
-            },
-            delete: async (key) => {
-                localStorage.removeItem(key);
-                return { key, deleted: true };
-            }
-        };
-    </script>
-
-    <script type="text/babel">
-        const { useState, useEffect } = React;
-
-        const AuditPricingSystem = () => {
-            const [isAdmin, setIsAdmin] = useState(false);
-            const [showLogin, setShowLogin] = useState(false);
-            const [password, setPassword] = useState('');
-            const [adminPassword, setAdminPassword] = useState('admin123');
-            const [settings, setSettings] = useState({
-                employee1Salary: 8000, employee2Salary: 8000, employee1Hours: 1400, employee2Hours: 1400,
-                partnerCostEnabled: true, partnerCostPerHour: 500, partnerPercentage: 7,
-                monthlyBenefits: 2000, monthlyPhone: 500, monthlyElectricity: 800, monthlyWater: 300,
-                monthlyGovernment: 1000, monthlyHospitality: 500, monthlySupplies: 800, monthlyStationery: 300,
-                monthlyMisc: 1000, semiAnnualRent: 60000, annualSoftware: 12000, annualLicenses: 5000,
-                annualSOCPA: 3000, annualMarketing: 10000, monthlyDepreciation: 1600
-            });
-            const [proposals, setProposals] = useState([]);
-            const [currentClient, setCurrentClient] = useState({
-                name: '', revenue: '', sector: 'تجاري', complexity: 'متوسط', hasCommission: false,
-                commissionRate: 15, hasCollaborators: false, collaboratorRate: 20,
-                partnerHours: 0, employee1Hours: 0, employee2Hours: 0, targetMargin: 35
-            });
-            const [activeTab, setActiveTab] = useState('calculator');
-            const [employeeName, setEmployeeName] = useState('');
-
-            useEffect(() => {
-                const load = async () => {
-                    try {
-                        const s = await window.storage.get('audit_settings');
-                        if (s) setSettings(JSON.parse(s.value));
-                        const p = await window.storage.get('audit_proposals');
-                        if (p) setProposals(JSON.parse(p.value));
-                        const pw = await window.storage.get('admin_password');
-                        if (pw) setAdminPassword(pw.value);
-                        const n = localStorage.getItem('employeeName');
-                        if (n) setEmployeeName(n);
-                    } catch (e) {}
-                };
-                load();
-            }, []);
-
-            const saveSettings = async () => {
-                await window.storage.set('audit_settings', JSON.stringify(settings));
-                alert('تم حفظ الإعدادات ✓');
-            };
-
-            const saveAdminPassword = async (np) => {
-                await window.storage.set('admin_password', np);
-                setAdminPassword(np);
-                alert('تم تغيير كلمة المرور ✓');
-            };
-
-            const saveProposals = async (d) => {
-                await window.storage.set('audit_proposals', JSON.stringify(d));
-            };
-
-            const handleLogin = () => {
-                if (password === adminPassword) {
-                    setIsAdmin(true);
-                    setShowLogin(false);
-                    setPassword('');
-                    alert('تم تسجيل الدخول ✓');
-                } else {
-                    alert('كلمة المرور غير صحيحة!');
-                }
-            };
-
-            const calcCostPerHour = () => {
-                const m = settings.monthlyBenefits + settings.monthlyPhone + settings.monthlyElectricity +
-                    settings.monthlyWater + settings.monthlyGovernment + settings.monthlyHospitality +
-                    settings.monthlySupplies + settings.monthlyStationery + settings.monthlyMisc +
-                    settings.monthlyDepreciation + (settings.semiAnnualRent / 6) +
-                    ((settings.annualSoftware + settings.annualLicenses + settings.annualSOCPA + settings.annualMarketing) / 12);
-                const a = m * 12;
-                const oh = a / 2;
-                return {
-                    employee1: ((settings.employee1Salary * 12) + oh) / settings.employee1Hours,
-                    employee2: ((settings.employee2Salary * 12) + oh) / settings.employee2Hours,
-                    partner: settings.partnerCostPerHour,
-                    totalMonthly: m,
-                    totalAnnual: a
-                };
-            };
-
-            const suggestHours = (rev) => {
-                const r = parseFloat(rev);
-                let t = r <= 5 ? 50 : r <= 10 ? 80 : r <= 25 ? 120 : r <= 50 ? 180 : r <= 75 ? 240 : 300;
-                const p = Math.round(t * (settings.partnerPercentage / 100));
-                const rem = t - p;
-                const e1 = Math.round(rem * 0.55);
-                return { total: t, partner: p, employee1: e1, employee2: rem - e1 };
-            };
-
-            useEffect(() => {
-                if (currentClient.revenue) {
-                    const s = suggestHours(currentClient.revenue);
-                    setCurrentClient(c => ({ ...c, partnerHours: s.partner, employee1Hours: s.employee1, employee2Hours: s.employee2 }));
-                }
-            }, [currentClient.revenue, settings.partnerPercentage]);
-
-            const calcPrice = () => {
-                const c = calcCostPerHour();
-                const pCost = settings.partnerCostEnabled ? currentClient.partnerHours * c.partner : 0;
-                const e1Cost = currentClient.employee1Hours * c.employee1;
-                const e2Cost = currentClient.employee2Hours * c.employee2;
-                const hCost = pCost + e1Cost + e2Cost;
-                const pbv = hCost / (1 - currentClient.targetMargin / 100);
-                const vr = (currentClient.hasCollaborators ? currentClient.collaboratorRate / 100 : 0) +
-                    (currentClient.hasCommission ? currentClient.commissionRate / 100 : 0);
-                const fp = pbv / (1 - vr);
-                const cCost = currentClient.hasCollaborators ? fp * (currentClient.collaboratorRate / 100) : 0;
-                const comCost = currentClient.hasCommission ? fp * (currentClient.commissionRate / 100) : 0;
-                const tCost = hCost + cCost + comCost;
-                const prof = fp - tCost;
-                return {
-                    hoursCost: hCost, partnerCost: pCost, emp1Cost: e1Cost, emp2Cost: e2Cost,
-                    collabCost: cCost, commCost: comCost, totalCost: tCost, finalPrice: fp,
-                    profit: prof, profitMargin: (prof / fp) * 100
-                };
-            };
-
-            const addProposal = () => {
-                if (!currentClient.name || !currentClient.revenue) return alert('أدخل اسم العميل والإيرادات');
-                if (!employeeName) {
-                    const n = prompt('الرجاء إدخال اسمك:');
-                    if (!n) return;
-                    setEmployeeName(n);
-                    localStorage.setItem('employeeName', n);
-                }
-                const pr = calcPrice();
-                const np = {
-                    id: Date.now(), name: currentClient.name, revenue: currentClient.revenue,
-                    sector: currentClient.sector, complexity: currentClient.complexity,
-                    proposedPrice: pr.finalPrice, totalCost: pr.totalCost, profit: pr.profit,
-                    profitMargin: pr.profitMargin, status: 'قيد الدراسة',
-                    date: new Date().toLocaleDateString('ar-SA'), createdBy: employeeName,
-                    competitorPrice: '', competitorName: '', rejectionReason: ''
-                };
-                const up = [...proposals, np];
-                setProposals(up);
-                saveProposals(up);
-                alert('تم حفظ العرض ✓');
-            };
-
-            const deleteProposal = (id) => {
-                if (!isAdmin) return alert('صلاحيات المدير فقط!');
-                if (confirm('حذف العرض؟')) {
-                    const up = proposals.filter(p => p.id !== id);
-                    setProposals(up);
-                    saveProposals(up);
-                }
-            };
-
-            const updateProposal = (id, field, value) => {
-                const up = proposals.map(p => p.id === id ? { ...p, [field]: value } : p);
-                setProposals(up);
-                saveProposals(up);
-            };
-
-            const stats = {
-                totalProposals: proposals.length,
-                winRate: proposals.length > 0 ? (proposals.filter(p => p.status === 'مقبول').length / proposals.length) * 100 : 0,
-                avgProfit: proposals.length > 0 ? proposals.reduce((s, c) => s + c.profitMargin, 0) / proposals.length : 0
-            };
-
-            const costs = calcCostPerHour();
-            const pricing = currentClient.revenue ? calcPrice() : null;
-
-            return (
-                <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4" dir="rtl">
-                    <div className="max-w-7xl mx-auto">
-                        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-                            <div className="flex items-center justify-between flex-wrap gap-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-blue-600 p-3 rounded-lg">
-                                        <svg className="text-white" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <rect x="4" y="2" width="16" height="20" rx="2"/>
-                                            <line x1="8" y1="6" x2="16" y2="6"/>
-                                            <line x1="8" y1="10" x2="16" y2="10"/>
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <h1 className="text-2xl md:text-3xl font-bold text-gray-800">نظام تسعير خدمات المراجعة</h1>
-                                        <p className="text-sm text-gray-600">نظام احترافي لحساب التكاليف والتسعير</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    {employeeName && !isAdmin && (
-                                        <div className="px-3 py-2 bg-blue-100 rounded-lg text-sm">
-                                            <span className="text-gray-600">المستخدم: </span>
-                                            <span className="font-bold text-blue-700">{employeeName}</span>
-                                        </div>
-                                    )}
-                                    {isAdmin ? (
-                                        <div className="flex items-center gap-2">
-                                            <div className="px-3 py-2 bg-green-100 rounded-lg">
-                                                <span className="text-sm font-bold text-green-700">👑 مدير</span>
+</div>
+                                                <div className="grid grid-cols-2 gap-3 text-sm">
+                                                    <div className="p-3 bg-blue-50 rounded">
+                                                        <div className="text-xs text-gray-600">السعر</div>
+                                                        <div className="font-bold text-blue-600">{prop.proposedPrice.toFixed(0)}</div>
+                                                    </div>
+                                                    <div className="p-3 bg-red-50 rounded">
+                                                        <div className="text-xs text-gray-600">التكلفة</div>
+                                                        <div className="font-bold text-red-600">{prop.totalCost.toFixed(0)}</div>
+                                                    </div>
+                                                    <div className="p-3 bg-green-50 rounded">
+                                                        <div className="text-xs text-gray-600">الربح</div>
+                                                        <div className="font-bold text-green-600">{prop.profit.toFixed(0)}</div>
+                                                    </div>
+                                                    <div className="p-3 bg-purple-50 rounded">
+                                                        <div className="text-xs text-gray-600">الهامش</div>
+                                                        <div className="font-bold text-purple-600">{prop.profitMargin.toFixed(1)}%</div>
+                                                    </div>
+                                                </div>
+                                                <div className="grid md:grid-cols-3 gap-3 mt-3">
+                                                    <div>
+                                                        <label className="block text-xs mb-1">الحالة</label>
+                                                        <select value={prop.status} onChange={(e) => updateProposal(prop.id, 'status', e.target.value)} className="w-full px-2 py-1 border rounded text-sm">
+                                                            <option>قيد الدراسة</option>
+                                                            <option>مقبول</option>
+                                                            <option>مرفوض</option>
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs mb-1">سعر المنافس</label>
+                                                        <input type="number" value={prop.competitorPrice} onChange={(e) => updateProposal(prop.id, 'competitorPrice', e.target.value)} className="w-full px-2 py-1 border rounded text-sm" placeholder="اختياري" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs mb-1">اسم المنافس</label>
+                                                        <input type="text" value={prop.competitorName} onChange={(e) => updateProposal(prop.id, 'competitorName', e.target.value)} className="w-full px-2 py-1 border rounded text-sm" placeholder="اختياري" />
+                                                    </div>
+                                                </div>
+                                                {prop.status === 'مرفوض' && (
+                                                    <div className="mt-3">
+                                                        <label className="block text-xs mb-1">سبب الرفض</label>
+                                                        <select value={prop.rejectionReason} onChange={(e) => updateProposal(prop.id, 'rejectionReason', e.target.value)} className="w-full px-2 py-1 border rounded text-sm">
+                                                            <option value="">اختر السبب</option>
+                                                            <option>السعر مرتفع</option>
+                                                            <option>اختاروا منافس</option>
+                                                            <option>تأجيل</option>
+                                                            <option>أخرى</option>
+                                                        </select>
+                                                    </div>
+                                                )}
                                             </div>
-                                            <button onClick={() => setIsAdmin(false)} className="px-3 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700">
-                                                خروج
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <button onClick={() => setShowLogin(true)} className="px-3 py-2 bg-gray-600 text-white rounded-lg text-sm hover:bg-gray-700">
-                                            🔒 دخول المدير
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        {showLogin && !isAdmin && (
-                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                                <div className="bg-white rounded-lg p-6 max-w-md w-full">
-                                    <h2 className="text-xl font-bold mb-4">تسجيل دخول المدير</h2>
-                                    <input
-                                        type="password"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
-                                        className="w-full px-4 py-2 border rounded-lg mb-4"
-                                        placeholder="كلمة المرور"
-                                        autoFocus
-                                    />
-                                    <div className="flex gap-3">
-                                        <button onClick={handleLogin} className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">دخول</button>
-                                        <button onClick={() => { setShowLogin(false); setPassword(''); }} className="flex-1 bg-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400">إلغاء</button>
+                                        ))}
                                     </div>
-                                    <p className="mt-3 text-xs text-center text-gray-600">
-                                        كلمة المرور الافتراضية: <code className="bg-gray-100 px-2 py-1 rounded">admin123</code>
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="bg-white rounded-lg shadow-lg mb-6 overflow-x-auto">
-                            <div className="flex">
-                                <button onClick={() => setActiveTab('calculator')} className={`flex items-center gap-2 px-4 py-3 font-semibold text-sm whitespace-nowrap ${activeTab === 'calculator' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>
-                                    📊 حاسبة التسعير
-                                </button>
-                                <button onClick={() => setActiveTab('proposals')} className={`flex items-center gap-2 px-4 py-3 font-semibold text-sm whitespace-nowrap ${activeTab === 'proposals' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>
-                                    📄 العروض ({proposals.length})
-                                </button>
-                                {isAdmin && (
-                                    <>
-                                        <button onClick={() => setActiveTab('dashboard')} className={`flex items-center gap-2 px-4 py-3 font-semibold text-sm whitespace-nowrap ${activeTab === 'dashboard' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>
-                                            📈 لوحة المعلومات
-                                        </button>
-                                        <button onClick={() => setActiveTab('settings')} className={`flex items-center gap-2 px-4 py-3 font-semibold text-sm whitespace-nowrap ${activeTab === 'settings' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>
-                                            ⚙️ الإعدادات
-                                        </button>
-                                    </>
                                 )}
                             </div>
-                        </div>
+                        )}
 
-                        {activeTab === 'calculator' && (
-                            <div className="grid lg:grid-cols-2 gap-6">
-                                <div className="bg-white rounded-lg shadow-lg p-6">
-                                    <h2 className="text-xl font-bold mb-4">معلومات العميل</h2>
-                                    <div className="space-y-4">
-                                        <input type="text" value={currentClient.name} onChange={(e) => setCurrentClient({...currentClient, name: e.target.value})} className="w-full px-4 py-2 border rounded-lg" placeholder="اسم العميل" />
-                                        <input type="number" value={currentClient.revenue} onChange={(e) => setCurrentClient({...currentClient, revenue: e.target.value})} className="w-full px-4 py-2 border rounded-lg" placeholder="حجم الإيرادات (مليون)" />
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <select value={currentClient.sector} onChange={(e) => setCurrentClient({...currentClient, sector: e.target.value})} className="w-full px-4 py-2 border rounded-lg">
-                                                <option>تجاري</option><option>صناعي</option><option>خدمي</option><option>مالي</option><option>أخرى</option>
-                                            </select>
-                                            <select value={currentClient.complexity} onChange={(e) => setCurrentClient({...currentClient, complexity: e.target.value})} className="w-full px-4 py-2 border rounded-lg">
-                                                <option>بسيط</option><option>متوسط</option><option>معقد</option>
-                                            </select>
-                                        </div>
-                                        <div className="p-4 bg-blue-50 rounded-lg">
-                                            <h3 className="font-bold mb-3 text-sm">الساعات المتوقعة</h3>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <div>
-                                                    <label className="block text-xs mb-1">ساعات الشريك</label>
-                                                    <input type="number" value={currentClient.partnerHours} onChange={(e) => setCurrentClient({...currentClient, partnerHours: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded text-sm" />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-xs mb-1">ساعات موظف 1</label>
-                                                    <input type="number" value={currentClient.employee1Hours} onChange={(e) => setCurrentClient({...currentClient, employee1Hours: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded text-sm" />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-xs mb-1">ساعات موظف 2</label>
-                                                    <input type="number" value={currentClient.employee2Hours} onChange={(e) => setCurrentClient({...currentClient, employee2Hours: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded text-sm" />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-xs mb-1">الإجمالي</label>
-                                                    <input type="number" value={currentClient.partnerHours + currentClient.employee1Hours + currentClient.employee2Hours} readOnly className="w-full px-3 py-2 border rounded bg-gray-100 text-sm" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="flex items-center gap-2">
-                                                <input type="checkbox" checked={currentClient.hasCollaborators} onChange={(e) => setCurrentClient({...currentClient, hasCollaborators: e.target.checked})} className="w-4 h-4" />
-                                                <span className="text-sm">يوجد متعاونين</span>
-                                            </label>
-                                            {currentClient.hasCollaborators && (
-                                                <input type="number" value={currentClient.collaboratorRate} onChange={(e) => setCurrentClient({...currentClient, collaboratorRate: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded text-sm" placeholder="نسبة المتعاونين %" />
-                                            )}
-                                            <label className="flex items-center gap-2">
-                                                <input type="checkbox" checked={currentClient.hasCommission} onChange={(e) => setCurrentClient({...currentClient, hasCommission: e.target.checked})} className="w-4 h-4" />
-                                                <span className="text-sm">يوجد عمولة</span>
-                                            </label>
-                                            {currentClient.hasCommission && (
-                                                <input type="number" value={currentClient.commissionRate} onChange={(e) => setCurrentClient({...currentClient, commissionRate: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded text-sm" placeholder="نسبة العمولة %" />
-                                            )}
-                                            <div>
-                                                <label className="block text-sm mb-1">هامش الربح المستهدف (%)</label>
-                                                <input type="number" value={currentClient.targetMargin} onChange={(e) => setCurrentClient({...currentClient, targetMargin: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded" />
-                                            </div>
-                                        </div>
+                        {activeTab === 'dashboard' && isAdmin && (
+                            <div className="space-y-6">
+                                <div className="grid md:grid-cols-3 gap-4">
+                                    <div className="bg-white rounded-lg shadow-lg p-6">
+                                        <div className="text-sm text-gray-600 mb-1">إجمالي العروض</div>
+                                        <div className="text-3xl font-bold text-gray-800">{stats.totalProposals}</div>
+                                    </div>
+                                    <div className="bg-white rounded-lg shadow-lg p-6">
+                                        <div className="text-sm text-gray-600 mb-1">معدل القبول</div>
+                                        <div className="text-3xl font-bold text-green-600">{stats.winRate.toFixed(1)}%</div>
+                                    </div>
+                                    <div className="bg-white rounded-lg shadow-lg p-6">
+                                        <div className="text-sm text-gray-600 mb-1">متوسط هامش الربح</div>
+                                        <div className="text-3xl font-bold text-orange-600">{stats.avgProfit.toFixed(1)}%</div>
                                     </div>
                                 </div>
 
                                 <div className="bg-white rounded-lg shadow-lg p-6">
-                                    <h2 className="text-xl font-bold mb-4">النتائج</h2>
-                                    {pricing ? (
-                                        <div className="space-y-4">
-                                            <div className="p-4 bg-blue-50 rounded-lg">
-                                                <h3 className="font-bold mb-2 text-sm">التكاليف المباشرة</h3>
-                                                <div className="space-y-1 text-sm">
-                                                    {settings.partnerCostEnabled && (
-                                                        <div className="flex justify-between">
-                                                            <span>ساعات الشريك:</span>
-                                                            <span className="font-bold">{pricing.partnerCost.toFixed(0)} ر.س</span>
-                                                        </div>
-                                                    )}
-                                                    <div className="flex justify-between">
-                                                        <span>ساعات الموظفين:</span>
-                                                        <span className="font-bold">{(pricing.emp1Cost + pricing.emp2Cost).toFixed(0)} ر.س</span>
+                                    <h3 className="text-xl font-bold mb-4">حالة العروض</h3>
+                                    <div className="space-y-3">
+                                        {['مقبول', 'مرفوض', 'قيد الدراسة'].map(status => {
+                                            const count = proposals.filter(p => p.status === status).length;
+                                            const percentage = proposals.length > 0 ? (count / proposals.length) * 100 : 0;
+                                            return (
+                                                <div key={status}>
+                                                    <div className="flex justify-between mb-1 text-sm">
+                                                        <span>{status}</span>
+                                                        <span className="font-bold">{count} ({percentage.toFixed(0)}%)</span>
                                                     </div>
-                                                    <div className="flex justify-between border-t pt-1">
-                                                        <span className="font-bold">إجمالي تكلفة الساعات:</span>
-                                                        <span className="font-bold text-blue-600">{pricing.hoursCost.toFixed(0)} ر.س</span>
+                                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                                        <div className={`h-2 rounded-full ${status === 'مقبول' ? 'bg-green-500' : status === 'مرفوض' ? 'bg-red-500' : 'bg-yellow-500'}`} style={{ width: `${percentage}%` }} />
                                                     </div>
                                                 </div>
-                                            </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
 
-                                            <div className="p-4 bg-green-50 rounded-lg">
-                                                <h3 className="font-bold mb-2 text-sm">التكاليف المتغيرة</h3>
-                                                <div className="space-y-1 text-sm">
-                                                    <div className="flex justify-between">
-                                                        <span>المتعاونين ({currentClient.collaboratorRate}%):</span>
-                                                        <span className="font-bold">{pricing.collabCost.toFixed(0)} ر.س</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span>العمولات ({currentClient.commissionRate}%):</span>
-                                                        <span className="font-bold">{pricing.commCost.toFixed(0)} ر.س</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="p-5 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg">
-                                                <h3 className="font-bold mb-3">💰 السعر النهائي</h3>
-                                                <div className="space-y-2">
-                                                    <div className="flex justify-between">
-                                                        <span>إجمالي التكلفة:</span>
-                                                        <span className="font-bold text-red-600">{pricing.totalCost.toFixed(0)} ر.س</span>
-                                                    </div>
-                                                    <div className="flex justify-between text-xl">
-                                                        <span className="font-bold">السعر المقترح:</span>
-                                                        <span className="font-bold text-green-600">{pricing.finalPrice.toFixed(0)} ر.س</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span>صافي الربح:</span>
-                                                        <span className="font-bold text-blue-600">{pricing.profit.toFixed(0)} ر.س</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span>هامش الربح:</span>
-                                                        <span className="font-bold text-purple-600">{pricing.profitMargin.toFixed(1)}%</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <button onClick={addProposal} className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700">
-                                                💾 حفظ العرض
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div className="text-center text-gray-500 py-12">
-                                            <p>أدخل معلومات العميل لعرض النتائج</p>
-                                        </div>
-                                    )}
+                                <div className="bg-white rounded-lg shadow-lg p-6 overflow-x-auto">
+                                    <h3 className="text-xl font-bold mb-4">أحدث العروض</h3>
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-gray-100">
+                                            <tr>
+                                                <th className="px-3 py-2 text-right">العميل</th>
+                                                <th className="px-3 py-2 text-right">المستخدم</th>
+                                                <th className="px-3 py-2 text-right">السعر</th>
+                                                <th className="px-3 py-2 text-right">الحالة</th>
+                                                <th className="px-3 py-2 text-right">التاريخ</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {proposals.slice().reverse().slice(0, 10).map(prop => (
+                                                <tr key={prop.id} className="border-b">
+                                                    <td className="px-3 py-2">{prop.name}</td>
+                                                    <td className="px-3 py-2">{prop.createdBy}</td>
+                                                    <td className="px-3 py-2 font-bold">{prop.proposedPrice.toFixed(0)}</td>
+                                                    <td className="px-3 py-2">
+                                                        <span className={`px-2 py-1 rounded text-xs ${prop.status === 'مقبول' ? 'bg-green-100 text-green-700' : prop.status === 'مرفوض' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                                            {prop.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-3 py-2">{prop.date}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         )}
 
-                        {activeTab === 'proposals' && (
+                        {activeTab === 'settings' && isAdmin && (
                             <div className="bg-white rounded-lg shadow-lg p-6">
-                                <h2 className="text-xl font-bold mb-4">العروض المقدمة ({proposals.length})</h2>
-                                {proposals.length === 0 ? (
-                                    <div className="text-center text-gray-500 py-12">
-                                        <p>لا توجد عروض محفوظة</p>
+                                <h2 className="text-xl font-bold mb-6">إعدادات التكاليف</h2>
+                                
+                                <div className="mb-8 p-4 bg-yellow-50 rounded-lg border-2 border-yellow-300">
+                                    <h3 className="text-lg font-bold mb-3 text-yellow-800">تغيير كلمة مرور المدير</h3>
+                                    <div className="flex gap-3">
+                                        <input type="text" id="newPassword" className="flex-1 px-3 py-2 border rounded" placeholder="كلمة المرور الجديدة" />
+                                        <button onClick={() => {
+                                            const np = document.getElementById('newPassword').value;
+                                            if (np && np.length >= 4) {
+                                                saveAdminPassword(np);
+                                                document.getElementById('newPassword').value = '';
+                                            } else {
+                                                alert('كلمة المرور 4 أحرف على الأقل');
+                                            }
+                                        }} className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700">
+                                            تغيير
+                                        </button>
                                     </div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        {proposals.slice().reverse().map(prop => (
-                                            <div key={prop.id} className="p-4 border rounded-lg">
-                                                <div className="flex justify-between items-start mb-3">
-                                                    <div>
-                                                        <h3 className="font-bold">{prop.name}</h3>
-                                                        <p className="text-sm text-gray-600">{prop.revenue}م - {prop.sector} - {prop.complexity}</p>
-                                                        <p className="text-xs text-gray-500">بواسطة: {prop.createdBy} | {prop.date}</p>
-                                                    </div>
-                                                    {isAdmin && (
-                                                        <button onClick={() => deleteProposal(prop.id)} className="text-red-600 text-sm">🗑️</button>
-                                                    )}
+                                </div>
+
+                                <div className="mb-8">
+                                    <h3 className="text-lg font-bold mb-4">الرواتب</h3>
+                                    <div className="grid md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-semibold mb-2">راتب موظف 1 (شهري)</label>
+                                            <input type="number" value={settings.employee1Salary} onChange={(e) => setSettings({...settings, employee1Salary: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold mb-2">ساعات العمل السنوية - موظف 1</label>
+                                            <input type="number" value={settings.employee1Hours} onChange={(e) => setSettings({...settings, employee1Hours: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold mb-2">راتب موظف 2 (شهري)</label>
+                                            <input type="number" value={settings.employee2Salary} onChange={(e) => setSettings({...settings, employee2Salary: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold mb-2">ساعات العمل السنوية - موظف 2</label>
+                                            <input type="number" value={settings.employee2Hours} onChange={(e) => setSettings({...settings, employee2Hours: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mb-8 p-4 bg-blue-50 rounded-lg">
+                                    <h3 className="text-lg font-bold mb-4">إعدادات الشريك</h3>
+                                    <label className="flex items-center gap-3 mb-4">
+                                        <input type="checkbox" checked={settings.partnerCostEnabled} onChange={(e) => setSettings({...settings, partnerCostEnabled: e.target.checked})} className="w-4 h-4" />
+                                        <span className="font-semibold">احتساب تكلفة افتراضية لساعة الشريك</span>
+                                    </label>
+                                    {settings.partnerCostEnabled && (
+                                        <div className="grid md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm mb-2">التكلفة (ريال/ساعة)</label>
+                                                <input type="number" value={settings.partnerCostPerHour} onChange={(e) => setSettings({...settings, partnerCostPerHour: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm mb-2">نسبة ساعات الشريك (%)</label>
+                                                <input type="number" value={settings.partnerPercentage} onChange={(e) => setSettings({...settings, partnerPercentage: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded" />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="mb-8">
+                                    <h3 className="text-lg font-bold mb-4">التكاليف الشهرية (ريال)</h3>
+                                    <div className="grid md:grid-cols-3 gap-4">
+                                        {[
+                                            {key: 'monthlyBenefits', label: 'منافع الموظفين'},
+                                            {key: 'monthlyPhone', label: 'هاتف'},
+                                            {key: 'monthlyElectricity', label: 'كهرباء'},
+                                            {key: 'monthlyWater', label: 'مياه'},
+                                            {key: 'monthlyGovernment', label: 'مصاريف حكومية'},
+                                            {key: 'monthlyHospitality', label: 'ضيافة'},
+                                            {key: 'monthlySupplies', label: 'مواد استهلاكية'},
+                                            {key: 'monthlyStationery', label: 'قرطاسية'},
+                                            {key: 'monthlyMisc', label: 'متنوعة'}
+                                        ].map(item => (
+                                            <div key={item.key}>
+                                                <label className="block text-sm mb-1">{item.label}</label>
+                                                <input type="number" value={settings[item.key]} onChange={(e) => setSettings({...settings, [item.key]: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded text-sm" />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="mb-8">
+                                    <h3 className="text-lg font-bold mb-4">تكاليف أخرى</h3>
+                                    <div className="grid md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm mb-2">إيجار (نصف سنوي)</label>
+                                            <input type="number" value={settings.semiAnnualRent} onChange={(e) => setSettings({...settings, semiAnnualRent: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm mb-2">برامج وتقنية (سنوي)</label>
+                                            <input type="number" value={settings.annualSoftware} onChange={(e) => setSettings({...settings, annualSoftware: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm mb-2">رخص عمل (سنوي)</label>
+                                            <input type="number" value={settings.annualLicenses} onChange={(e) => setSettings({...settings, annualLicenses: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm mb-2">SOCPA (سنوي)</label>
+                                            <input type="number" value={settings.annualSOCPA} onChange={(e) => setSettings({...settings, annualSOCPA: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm mb-2">تسويق (سنوي)</label>
+                                            <input type="number" value={settings.annualMarketing} onChange={(e) => setSettings({...settings, annualMarketing: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm mb-2">إهلاك (شهري)</label>
+                                            <input type="number" value={settings.monthlyDepreciation} onChange={(e) => setSettings({...settings, monthlyDepreciation: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border rounded" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button onClick={saveSettings} className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 mb-8">
+                                    💾 حفظ الإعدادات
+                                </button>
+
+                                <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
+                                    <h3 className="text-lg font-bold mb-4">ملخص التكاليف</h3>
+                                    <div className="grid md:grid-cols-2 gap-4">
+                                        <div className="bg-white p-4 rounded-lg shadow">
+                                            <div className="text-sm text-gray-600 mb-1">التكاليف الشهرية</div>
+                                            <div className="text-2xl font-bold text-blue-600">{costs.totalMonthly.toFixed(0)} ريال</div>
+                                        </div>
+                                        <div className="bg-white p-4 rounded-lg shadow">
+                                            <div className="text-sm text-gray-600 mb-1">التكاليف السنوية</div>
+                                            <div className="text-2xl font-bold text-blue-600">{costs.totalAnnual.toFixed(0)} ريال</div>
+                                        </div>
+                                        <div className="bg-white p-4 rounded-lg shadow">
+                                            <div className="text-sm text-gray-600 mb-1">تكلفة ساعة موظف 1</div>
+                                            <div className="text-2xl font-bold text-green-600">{costs.employee1.toFixed(0)} ريال</div>
+                                        </div>
+                                        <div className="bg-white p-4 rounded-lg shadow">
+                                            <div className="text-sm text-gray-600 mb-1">تكلفة ساعة موظف 2</div>
+                                            <div className="text-2xl font-bold text-green-600">{costs.employee2.toFixed(0)} ريال</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<AuditPricingSystem />);
+    </script>
+</body>
+</html>
