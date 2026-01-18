@@ -541,6 +541,25 @@
                             <div class="stat-value" id="margin">0%</div>
                         </div>
                     </div>
+                    
+                    <div class="hours-adjust" style="margin-top: 20px;">
+                        <h3 class="result-title">💰 تعديل السعر النهائي</h3>
+                        <p style="color: #B8B8B8; margin-bottom: 15px;">إذا اتفقت مع العميل على سعر مختلف</p>
+                        
+                        <div class="hours-row">
+                            <label>السعر المتفق عليه (شامل الضريبة):</label>
+                            <input type="number" id="finalAgreedPrice" placeholder="اتركه فارغاً لاستخدام السعر المقترح">
+                        </div>
+                        
+                        <div id="agreedPriceInfo" class="hidden" style="margin-top: 10px; padding: 10px; background: var(--darker); border-radius: 8px;">
+                            <p style="color: var(--accent); font-size: 0.9em;">
+                                السعر المقترح: <span id="suggestedPriceDisplay">0</span> ريال<br>
+                                السعر المتفق عليه: <span id="agreedPriceDisplay">0</span> ريال<br>
+                                <span id="priceDifference"></span>
+                            </p>
+                        </div>
+                    </div>
+
                     <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
                         <button onclick="saveProposal()">💾 حفظ العرض</button>
                         <button class="secondary" onclick="showModal('letterModal')">📄 خطاب ارتباط (PDF إنجليزي)</button>
@@ -567,25 +586,41 @@
                 <h3 class="section-title">التكاليف الشهرية المستقبلية</h3>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>إيجار المكاتب</label>
-                        <input type="number" id="futureRent" value="0">
-                    </div>
-                    <div class="form-group">
                         <label>صيانة وتنظيف</label>
                         <input type="number" id="futureMaintenance" value="0">
                     </div>
                     <div class="form-group">
-                        <label>مرافق</label>
+                        <label>كهرباء وماء</label>
                         <input type="number" id="futureUtilities" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>اتصالات وإنترنت</label>
+                        <input type="number" id="futureCommunications" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>اشتراكات برمجيات متخصصة</label>
+                        <input type="number" id="futureSoftware" value="0">
                     </div>
                     <div class="form-group">
                         <label>رواتب إدارية</label>
                         <input type="number" id="futureAdmin" value="0">
                     </div>
+                    <div class="form-group">
+                        <label>قرطاسية ومستلزمات</label>
+                        <input type="number" id="futureSupplies" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>تكاليف شهرية متنوعة</label>
+                        <input type="number" id="futureMonthlyMisc" value="0">
+                    </div>
                 </div>
 
                 <h3 class="section-title">التكاليف السنوية المستقبلية</h3>
                 <div class="form-grid">
+                    <div class="form-group">
+                        <label>إيجار المكاتب</label>
+                        <input type="number" id="futureRent" value="0">
+                    </div>
                     <div class="form-group">
                         <label>تأمينات</label>
                         <input type="number" id="futureInsurance" value="0">
@@ -595,12 +630,24 @@
                         <input type="number" id="futureDepreciation" value="0">
                     </div>
                     <div class="form-group">
-                        <label>تسويق</label>
+                        <label>تسويق وتطوير أعمال</label>
                         <input type="number" id="futureMarketing" value="0">
                     </div>
                     <div class="form-group">
-                        <label>تدريب</label>
+                        <label>رسوم SOCPA</label>
+                        <input type="number" id="futureSocpa" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>تدريب وشهادات</label>
                         <input type="number" id="futureTraining" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>اشتراكات برمجيات عامة</label>
+                        <input type="number" id="futureGeneralSoftware" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>تكاليف سنوية متنوعة</label>
+                        <input type="number" id="futureAnnualMisc" value="0">
                     </div>
                 </div>
 
@@ -683,19 +730,19 @@
                 <h3 class="section-title">التكاليف الشهرية (ريال)</h3>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>إيجار المكاتب</label>
-                        <input type="number" id="rent" value="0">
-                    </div>
-                    <div class="form-group">
                         <label>صيانة وتنظيف</label>
                         <input type="number" id="maintenance" value="0">
                     </div>
                     <div class="form-group">
-                        <label>مرافق</label>
+                        <label>كهرباء وماء</label>
                         <input type="number" id="utilities" value="0">
                     </div>
                     <div class="form-group">
-                        <label>برمجيات عامة</label>
+                        <label>اتصالات وإنترنت</label>
+                        <input type="number" id="communications" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>اشتراكات برمجيات متخصصة</label>
                         <input type="number" id="software" value="0">
                     </div>
                     <div class="form-group">
@@ -703,13 +750,21 @@
                         <input type="number" id="adminSalaries" value="0">
                     </div>
                     <div class="form-group">
-                        <label>قرطاسية</label>
+                        <label>قرطاسية ومستلزمات</label>
                         <input type="number" id="supplies" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>تكاليف شهرية متنوعة</label>
+                        <input type="number" id="monthlyMisc" value="0">
                     </div>
                 </div>
 
                 <h3 class="section-title">التكاليف السنوية (ريال)</h3>
                 <div class="form-grid">
+                    <div class="form-group">
+                        <label>إيجار المكاتب</label>
+                        <input type="number" id="rent" value="0">
+                    </div>
                     <div class="form-group">
                         <label>تأمينات</label>
                         <input type="number" id="insurance" value="0">
@@ -719,7 +774,7 @@
                         <input type="number" id="depreciation" value="0">
                     </div>
                     <div class="form-group">
-                        <label>تسويق</label>
+                        <label>تسويق وتطوير أعمال</label>
                         <input type="number" id="marketing" value="0">
                     </div>
                     <div class="form-group">
@@ -729,6 +784,14 @@
                     <div class="form-group">
                         <label>تدريب وشهادات</label>
                         <input type="number" id="training" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>اشتراكات برمجيات عامة</label>
+                        <input type="number" id="generalSoftware" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>تكاليف سنوية متنوعة</label>
+                        <input type="number" id="annualMisc" value="0">
                     </div>
                 </div>
 
@@ -1106,9 +1169,9 @@
             const st = parseFloat(document.getElementById('adjStaff').value) || 0;
             const total = p + s + st;
 
-            const monthly = ['rent','maintenance','utilities','software','adminSalaries','supplies']
+            const monthly = ['maintenance','utilities','communications','software','adminSalaries','supplies','monthlyMisc']
                 .reduce((sum, id) => sum + (parseFloat(document.getElementById(id)?.value) || 0), 0) * 12;
-            const annual = ['insurance','depreciation','marketing','socpa','training']
+            const annual = ['rent','insurance','depreciation','marketing','socpa','training','generalSoftware','annualMisc']
                 .reduce((sum, id) => sum + (parseFloat(document.getElementById(id)?.value) || 0), 0);
             const overhead = (monthly + annual) / (parseFloat(document.getElementById('annualHours')?.value) || 10000);
 
@@ -1138,7 +1201,42 @@
             document.getElementById('totalPrice').textContent = Math.round(totalPrice).toLocaleString() + ' ريال';
             document.getElementById('totalCost').textContent = Math.round(totalCost).toLocaleString() + ' ريال';
             document.getElementById('margin').textContent = margin + '%';
+            
+            // Setup final price adjustment
+            document.getElementById('suggestedPriceDisplay').textContent = Math.round(totalPrice).toLocaleString();
+            document.getElementById('finalAgreedPrice').addEventListener('input', updateAgreedPrice);
+            
             document.getElementById('pricing').classList.remove('hidden');
+        }
+
+        function updateAgreedPrice() {
+            const agreedPrice = parseFloat(document.getElementById('finalAgreedPrice').value);
+            const suggestedPrice = currentProposal.totalPrice;
+            
+            if (agreedPrice && agreedPrice > 0) {
+                document.getElementById('agreedPriceInfo').classList.remove('hidden');
+                document.getElementById('agreedPriceDisplay').textContent = Math.round(agreedPrice).toLocaleString();
+                
+                const difference = agreedPrice - suggestedPrice;
+                const percentage = ((difference / suggestedPrice) * 100).toFixed(1);
+                
+                if (difference > 0) {
+                    document.getElementById('priceDifference').innerHTML = 
+                        `<span style="color: #51CF66;">▲ زيادة: ${Math.round(difference).toLocaleString()} ریال (${percentage}%)</span>`;
+                } else if (difference < 0) {
+                    document.getElementById('priceDifference').innerHTML = 
+                        `<span style="color: #FF6B6B;">▼ تخفيض: ${Math.round(Math.abs(difference)).toLocaleString()} ريال (${percentage}%)</span>`;
+                } else {
+                    document.getElementById('priceDifference').innerHTML = 
+                        `<span style="color: var(--accent);">✓ نفس السعر المقترح</span>`;
+                }
+                
+                // Update current proposal with agreed price
+                currentProposal.agreedPrice = agreedPrice;
+            } else {
+                document.getElementById('agreedPriceInfo').classList.add('hidden');
+                currentProposal.agreedPrice = null;
+            }
         }
 
         function saveProposal() {
@@ -1152,6 +1250,9 @@
                 alert('احسب التسعير أولاً');
                 return;
             }
+
+            // Use agreed price if provided, otherwise use calculated price
+            const finalPrice = currentProposal.agreedPrice || currentProposal.totalPrice;
 
             const client = {
                 id: Date.now(),
@@ -1187,20 +1288,28 @@
                 supervisorHours: currentProposal.supervisorHours,
                 staffHours: currentProposal.staffHours,
                 totalHours: currentProposal.totalHours,
-                price: currentProposal.totalPrice
+                suggestedPrice: currentProposal.totalPrice,
+                price: finalPrice,
+                priceAdjusted: currentProposal.agreedPrice ? true : false
             };
 
             clients.push(client);
             localStorage.setItem('clients', JSON.stringify(clients));
-            alert('✅ تم حفظ العرض في البيانات التاريخية!\n\nالآن يمكن استخدام هذا العميل كمرجع للعملاء المشابهين في المستقبل.');
+            
+            const msg = currentProposal.agreedPrice ? 
+                `✅ تم حفظ العرض!\n\nالسعر المقترح: ${Math.round(currentProposal.totalPrice).toLocaleString()} ریال\nالسعر المتفق عليه: ${Math.round(finalPrice).toLocaleString()} ریال` :
+                '✅ تم حفظ العرض في البيانات التاريخية!';
+            
+            alert(msg);
             
             // Reset form
             document.querySelectorAll('input[type="text"], input[type="number"]').forEach(i => {
                 if (!i.id.includes('Rate') && !i.id.includes('Margin') && !i.id.includes('annual') && 
-                    !i.id.includes('rent') && !i.id.includes('maintenance') && !i.id.includes('utilities') &&
+                    !i.id.includes('maintenance') && !i.id.includes('utilities') && !i.id.includes('communications') &&
                     !i.id.includes('software') && !i.id.includes('adminSalaries') && !i.id.includes('supplies') &&
                     !i.id.includes('insurance') && !i.id.includes('depreciation') && !i.id.includes('marketing') &&
-                    !i.id.includes('socpa') && !i.id.includes('training')) {
+                    !i.id.includes('socpa') && !i.id.includes('training') && !i.id.includes('rent') &&
+                    !i.id.includes('generalSoftware') && !i.id.includes('Misc')) {
                     i.value = i.defaultValue || '';
                 }
             });
@@ -1565,17 +1674,21 @@
         function saveCosts() {
             costs = {
                 annualHours: parseFloat(document.getElementById('annualHours').value),
-                rent: parseFloat(document.getElementById('rent').value) || 0,
                 maintenance: parseFloat(document.getElementById('maintenance').value) || 0,
                 utilities: parseFloat(document.getElementById('utilities').value) || 0,
+                communications: parseFloat(document.getElementById('communications').value) || 0,
                 software: parseFloat(document.getElementById('software').value) || 0,
                 adminSalaries: parseFloat(document.getElementById('adminSalaries').value) || 0,
                 supplies: parseFloat(document.getElementById('supplies').value) || 0,
+                monthlyMisc: parseFloat(document.getElementById('monthlyMisc').value) || 0,
+                rent: parseFloat(document.getElementById('rent').value) || 0,
                 insurance: parseFloat(document.getElementById('insurance').value) || 0,
                 depreciation: parseFloat(document.getElementById('depreciation').value) || 0,
                 marketing: parseFloat(document.getElementById('marketing').value) || 0,
                 socpa: parseFloat(document.getElementById('socpa').value) || 0,
                 training: parseFloat(document.getElementById('training').value) || 0,
+                generalSoftware: parseFloat(document.getElementById('generalSoftware').value) || 0,
+                annualMisc: parseFloat(document.getElementById('annualMisc').value) || 0,
                 partnerRate: parseFloat(document.getElementById('partnerRate').value),
                 supervisorRate: parseFloat(document.getElementById('supervisorRate').value),
                 staffRate: parseFloat(document.getElementById('staffRate').value),
@@ -1587,9 +1700,9 @@
         }
 
         function calcCostSummary() {
-            const monthly = ['rent','maintenance','utilities','software','adminSalaries','supplies']
+            const monthly = ['maintenance','utilities','communications','software','adminSalaries','supplies','monthlyMisc']
                 .reduce((sum, id) => sum + (parseFloat(document.getElementById(id)?.value) || 0), 0) * 12;
-            const annual = ['insurance','depreciation','marketing','socpa','training']
+            const annual = ['rent','insurance','depreciation','marketing','socpa','training','generalSoftware','annualMisc']
                 .reduce((sum, id) => sum + (parseFloat(document.getElementById(id)?.value) || 0), 0);
             const total = monthly + annual;
             const hours = parseFloat(document.getElementById('annualHours')?.value) || 10000;
