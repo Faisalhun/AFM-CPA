@@ -547,14 +547,15 @@
                         <p style="color: #B8B8B8; margin-bottom: 15px;">إذا اتفقت مع العميل على سعر مختلف</p>
                         
                         <div class="hours-row">
-                            <label>السعر المتفق عليه (شامل الضريبة):</label>
+                            <label>السعر المتفق عليه (قبل الضريبة):</label>
                             <input type="number" id="finalAgreedPrice" placeholder="اتركه فارغاً لاستخدام السعر المقترح">
                         </div>
                         
                         <div id="agreedPriceInfo" class="hidden" style="margin-top: 10px; padding: 10px; background: var(--darker); border-radius: 8px;">
                             <p style="color: var(--accent); font-size: 0.9em;">
-                                السعر المقترح: <span id="suggestedPriceDisplay">0</span> ريال<br>
-                                السعر المتفق عليه: <span id="agreedPriceDisplay">0</span> ريال<br>
+                                السعر المقترح (قبل الضريبة): <span id="suggestedPriceDisplay">0</span> ريال<br>
+                                السعر المتفق عليه (قبل الضريبة): <span id="agreedPriceDisplay">0</span> ريال<br>
+                                السعر النهائي (مع الضريبة 15%): <span id="agreedPriceWithVAT">0</span> ريال<br>
                                 <span id="priceDifference"></span>
                             </p>
                         </div>
@@ -811,11 +812,15 @@
                     </div>
                 </div>
 
-                <h3 class="section-title">هامش الربح</h3>
+                <h3 class="section-title">هامش الربح والعمولات</h3>
                 <div class="form-grid">
                     <div class="form-group">
                         <label>هامش الربح المستهدف (%)</label>
                         <input type="number" id="profitMargin" value="30">
+                    </div>
+                    <div class="form-group">
+                        <label>نسبة العمولة (%)</label>
+                        <input type="number" id="commissionRate" value="0" step="0.5">
                     </div>
                 </div>
 
@@ -829,6 +834,10 @@
                         <div class="stat">
                             <div class="stat-label">التحميل لكل ساعة</div>
                             <div class="stat-value" id="perHour">0 ريال</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">نسبة العمولة</div>
+                            <div class="stat-value" id="commissionDisplay">0%</div>
                         </div>
                     </div>
                 </div>
@@ -1184,7 +1193,16 @@
             const totalCost = total * costPerHour;
             const margin = parseFloat(document.getElementById('profitMargin')?.value) || 30;
             const priceBeforeVAT = totalCost * (1 + margin / 100);
+            
+            // Calculate commission
+            const commissionRate = parseFloat(document.getElementById('commissionRate')?.value) || 0;
+            const commissionAmount = priceBeforeVAT * (commissionRate / 100);
+            const totalCostWithCommission = totalCost + commissionAmount;
+            
             const totalPrice = priceBeforeVAT * 1.15; // مع ضريبة 15%
+            
+            // Recalculate actual margin after commission
+            const actualMargin = ((priceBeforeVAT - totalCostWithCommission) / totalCostWithCommission * 100).toFixed(1);
 
             currentProposal = {
                 totalHours: total,
@@ -1192,37 +1210,49 @@
                 supervisorHours: s,
                 staffHours: st,
                 totalCost: totalCost,
+                commissionAmount: commissionAmount,
+                totalCostWithCommission: totalCostWithCommission,
                 priceBeforeVAT: priceBeforeVAT,
                 totalPrice: totalPrice,
-                margin: margin
+                margin: margin,
+                actualMargin: actualMargin,
+                commissionRate: commissionRate
             };
 
             document.getElementById('totalHours').textContent = total.toFixed(1);
             document.getElementById('totalPrice').textContent = Math.round(totalPrice).toLocaleString() + ' ريال';
-            document.getElementById('totalCost').textContent = Math.round(totalCost).toLocaleString() + ' ريال';
-            document.getElementById('margin').textContent = margin + '%';
+            document.getElementById('totalCost').textContent = Math.round(totalCostWithCommission).toLocaleString() + ' ريال';
+            
+            if (commissionRate > 0) {
+                document.getElementById('margin').textContent = actualMargin + '% (بعد العمولة)';
+            } else {
+                document.getElementById('margin').textContent = margin + '%';
+            }
             
             // Setup final price adjustment
-            document.getElementById('suggestedPriceDisplay').textContent = Math.round(totalPrice).toLocaleString();
+            document.getElementById('suggestedPriceDisplay').textContent = Math.round(priceBeforeVAT).toLocaleString();
             document.getElementById('finalAgreedPrice').addEventListener('input', updateAgreedPrice);
             
             document.getElementById('pricing').classList.remove('hidden');
         }
 
         function updateAgreedPrice() {
-            const agreedPrice = parseFloat(document.getElementById('finalAgreedPrice').value);
-            const suggestedPrice = currentProposal.totalPrice;
+            const agreedPriceBeforeVAT = parseFloat(document.getElementById('finalAgreedPrice').value);
+            const suggestedPriceBeforeVAT = currentProposal.priceBeforeVAT;
             
-            if (agreedPrice && agreedPrice > 0) {
+            if (agreedPriceBeforeVAT && agreedPriceBeforeVAT > 0) {
                 document.getElementById('agreedPriceInfo').classList.remove('hidden');
-                document.getElementById('agreedPriceDisplay').textContent = Math.round(agreedPrice).toLocaleString();
+                document.getElementById('agreedPriceDisplay').textContent = Math.round(agreedPriceBeforeVAT).toLocaleString();
                 
-                const difference = agreedPrice - suggestedPrice;
-                const percentage = ((difference / suggestedPrice) * 100).toFixed(1);
+                const agreedPriceWithVAT = agreedPriceBeforeVAT * 1.15;
+                document.getElementById('agreedPriceWithVAT').textContent = Math.round(agreedPriceWithVAT).toLocaleString();
+                
+                const difference = agreedPriceBeforeVAT - suggestedPriceBeforeVAT;
+                const percentage = ((difference / suggestedPriceBeforeVAT) * 100).toFixed(1);
                 
                 if (difference > 0) {
                     document.getElementById('priceDifference').innerHTML = 
-                        `<span style="color: #51CF66;">▲ زيادة: ${Math.round(difference).toLocaleString()} ریال (${percentage}%)</span>`;
+                        `<span style="color: #51CF66;">▲ زيادة: ${Math.round(difference).toLocaleString()} ريال (${percentage}%)</span>`;
                 } else if (difference < 0) {
                     document.getElementById('priceDifference').innerHTML = 
                         `<span style="color: #FF6B6B;">▼ تخفيض: ${Math.round(Math.abs(difference)).toLocaleString()} ريال (${percentage}%)</span>`;
@@ -1231,10 +1261,12 @@
                         `<span style="color: var(--accent);">✓ نفس السعر المقترح</span>`;
                 }
                 
-                // Update current proposal with agreed price
-                currentProposal.agreedPrice = agreedPrice;
+                // Update current proposal with agreed prices
+                currentProposal.agreedPriceBeforeVAT = agreedPriceBeforeVAT;
+                currentProposal.agreedPrice = agreedPriceWithVAT;
             } else {
                 document.getElementById('agreedPriceInfo').classList.add('hidden');
+                currentProposal.agreedPriceBeforeVAT = null;
                 currentProposal.agreedPrice = null;
             }
         }
@@ -1662,11 +1694,11 @@
         }
 
         function loadCostsForm() {
-            ['annualHours','rent','maintenance','utilities','software','adminSalaries','supplies',
-             'insurance','depreciation','marketing','socpa','training',
-             'partnerRate','supervisorRate','staffRate','profitMargin'].forEach(key => {
+            ['annualHours','maintenance','utilities','communications','software','adminSalaries','supplies','monthlyMisc',
+             'rent','insurance','depreciation','marketing','socpa','training','generalSoftware','annualMisc',
+             'partnerRate','supervisorRate','staffRate','profitMargin','commissionRate'].forEach(key => {
                 const el = document.getElementById(key);
-                if (el && costs[key]) el.value = costs[key];
+                if (el && costs[key] !== undefined) el.value = costs[key];
             });
             calcCostSummary();
         }
@@ -1692,7 +1724,8 @@
                 partnerRate: parseFloat(document.getElementById('partnerRate').value),
                 supervisorRate: parseFloat(document.getElementById('supervisorRate').value),
                 staffRate: parseFloat(document.getElementById('staffRate').value),
-                profitMargin: parseFloat(document.getElementById('profitMargin').value)
+                profitMargin: parseFloat(document.getElementById('profitMargin').value),
+                commissionRate: parseFloat(document.getElementById('commissionRate').value) || 0
             };
             localStorage.setItem('costs', JSON.stringify(costs));
             alert('تم حفظ التكاليف');
@@ -1707,11 +1740,14 @@
             const total = monthly + annual;
             const hours = parseFloat(document.getElementById('annualHours')?.value) || 10000;
             const perHour = total / hours;
+            const commissionRate = parseFloat(document.getElementById('commissionRate')?.value) || 0;
 
             if (document.getElementById('annualTotal'))
                 document.getElementById('annualTotal').textContent = total.toLocaleString() + ' ريال';
             if (document.getElementById('perHour'))
                 document.getElementById('perHour').textContent = perHour.toFixed(2) + ' ريال';
+            if (document.getElementById('commissionDisplay'))
+                document.getElementById('commissionDisplay').textContent = commissionRate + '%';
         }
 
         function loadPlanningForm() {
@@ -1849,12 +1885,13 @@
                             <th>إجمالي الساعات</th>
                             <th>السعر (ريال)</th>
                             <th>التاريخ</th>
+                            ${isAdmin ? '<th>الإجراءات</th>' : ''}
                         </tr>
                     </thead>
                     <tbody id="clientsTableBody">
             `;
             
-            clients.forEach(c => {
+            clients.forEach((c, index) => {
                 const date = new Date(c.id).toLocaleDateString('ar-SA');
                 html += `
                     <tr class="client-row" 
@@ -1872,12 +1909,72 @@
                         <td><strong>${c.totalHours || 0}</strong></td>
                         <td><strong>${(c.price || 0).toLocaleString()}</strong></td>
                         <td style="font-size: 0.9em; color: #B8B8B8;">${date}</td>
+                        ${isAdmin ? `<td>
+                            <button onclick="editClient(${index})" style="padding: 8px 15px; font-size: 0.9em; margin: 2px;">✏️ تعديل</button>
+                            <button onclick="deleteClient(${index})" class="secondary" style="padding: 8px 15px; font-size: 0.9em; margin: 2px;">🗑️ حذف</button>
+                        </td>` : ''}
                     </tr>
                 `;
             });
             
             html += '</tbody></table></div>';
             document.getElementById('clientsList').innerHTML = html;
+        }
+
+        function editClient(index) {
+            const client = clients[index];
+            if (!client) return;
+
+            const newName = prompt('اسم العميل:', client.name);
+            if (newName === null) return;
+
+            const newYear = prompt('السنة:', client.year);
+            if (newYear === null) return;
+
+            const newRevenue = prompt('الإيرادات (مليون ريال):', client.revenue);
+            if (newRevenue === null) return;
+
+            const newAssets = prompt('الأصول (مليون ريال):', client.assets);
+            if (newAssets === null) return;
+
+            const newPartnerHours = prompt('ساعات الشريك:', client.partnerHours);
+            if (newPartnerHours === null) return;
+
+            const newSupervisorHours = prompt('ساعات الإشراف:', client.supervisorHours);
+            if (newSupervisorHours === null) return;
+
+            const newStaffHours = prompt('ساعات العمل:', client.staffHours);
+            if (newStaffHours === null) return;
+
+            const newPrice = prompt('السعر النهائي (ريال):', client.price);
+            if (newPrice === null) return;
+
+            // Update client
+            clients[index].name = newName;
+            clients[index].year = newYear;
+            clients[index].revenue = parseFloat(newRevenue) || 0;
+            clients[index].assets = parseFloat(newAssets) || 0;
+            clients[index].partnerHours = parseFloat(newPartnerHours) || 0;
+            clients[index].supervisorHours = parseFloat(newSupervisorHours) || 0;
+            clients[index].staffHours = parseFloat(newStaffHours) || 0;
+            clients[index].totalHours = clients[index].partnerHours + clients[index].supervisorHours + clients[index].staffHours;
+            clients[index].price = parseFloat(newPrice) || 0;
+
+            localStorage.setItem('clients', JSON.stringify(clients));
+            alert('✅ تم تحديث بيانات العميل');
+            loadClients();
+        }
+
+        function deleteClient(index) {
+            const client = clients[index];
+            if (!client) return;
+
+            if (confirm(`هل أنت متأكد من حذف العميل "${client.name}" من البيانات التاريخية؟\n\nهذا الإجراء لا يمكن التراجع عنه.`)) {
+                clients.splice(index, 1);
+                localStorage.setItem('clients', JSON.stringify(clients));
+                alert('✅ تم حذف العميل من البيانات التاريخية');
+                loadClients();
+            }
         }
 
         function filterClients() {
