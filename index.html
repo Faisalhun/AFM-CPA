@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام التسعير - شركة علي فهد مسعود محاسبون ومراجعون قانونيون</title>
+    <title>نظام التسعير - شركة علي فهد مسعود</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <style>
         :root {
             --primary: #C89F65;
@@ -73,8 +75,10 @@
             padding: 40px;
             border-radius: 20px;
             border: 2px solid var(--primary);
-            max-width: 450px;
+            max-width: 600px;
             width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
         }
         .tabs {
             display: flex;
@@ -84,8 +88,8 @@
         }
         .tab {
             flex: 1;
-            min-width: 200px;
-            padding: 18px 30px;
+            min-width: 150px;
+            padding: 18px 20px;
             background: var(--card);
             border: 2px solid var(--border);
             border-radius: 12px;
@@ -93,6 +97,7 @@
             text-align: center;
             font-weight: 600;
             transition: all 0.3s;
+            font-size: 0.95em;
         }
         .tab:hover { border-color: var(--primary); transform: translateY(-2px); }
         .tab.active {
@@ -132,7 +137,7 @@
             font-weight: 600;
             font-size: 0.95em;
         }
-        input, select {
+        input, select, textarea {
             padding: 14px;
             background: var(--darker);
             border: 2px solid var(--border);
@@ -141,7 +146,7 @@
             font-size: 1em;
             font-family: 'Cairo', sans-serif;
         }
-        input:focus, select:focus {
+        input:focus, select:focus, textarea:focus {
             outline: none;
             border-color: var(--primary);
         }
@@ -155,6 +160,7 @@
             font-size: 1.1em;
             cursor: pointer;
             transition: all 0.3s;
+            font-family: 'Cairo', sans-serif;
         }
         button:hover { transform: translateY(-3px); }
         button.secondary {
@@ -224,22 +230,32 @@
             font-size: 0.9em;
         }
         .hidden { display: none !important; }
-        .alert {
-            padding: 15px 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            font-weight: 500;
+        .admin-indicator {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: var(--primary);
+            color: var(--darker);
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-weight: 700;
+            z-index: 1000;
         }
-        .alert-success {
-            background: rgba(0,128,0,0.2);
-            border: 1px solid #00a000;
-            color: #90EE90;
+        .comparison-table {
+            width: 100%;
+            margin-top: 20px;
         }
-        .alert-error {
-            background: rgba(139,0,0,0.2);
-            border: 1px solid #DC143C;
-            color: #FFB6C1;
+        .comparison-table td {
+            padding: 15px;
+            border: 1px solid var(--border);
         }
+        .comparison-table tr:first-child td {
+            background: var(--primary);
+            color: var(--darker);
+            font-weight: 700;
+        }
+        .increase { color: #FF6B6B; }
+        .decrease { color: #51CF66; }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -261,17 +277,6 @@
             color: #E8E8E8;
         }
         tr:hover { background: var(--card); }
-        .admin-indicator {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            background: var(--primary);
-            color: var(--darker);
-            padding: 10px 20px;
-            border-radius: 50px;
-            font-weight: 700;
-            z-index: 1000;
-        }
         @media (max-width: 768px) {
             h1 { font-size: 2em; }
             .form-grid { grid-template-columns: 1fr; }
@@ -300,7 +305,42 @@
                     <input type="password" id="adminPass">
                 </div>
                 <button onclick="login()" style="width: 100%; margin-bottom: 10px;">دخول</button>
-                <button class="secondary" onclick="closeModal()" style="width: 100%;">إلغاء</button>
+                <button class="secondary" onclick="closeModal('authModal')" style="width: 100%;">إلغاء</button>
+            </div>
+        </div>
+
+        <!-- Engagement Letter Modal -->
+        <div id="letterModal" class="modal">
+            <div class="modal-content">
+                <h2 class="card-header">بيانات خطاب الارتباط</h2>
+                <div class="form-grid" style="grid-template-columns: 1fr;">
+                    <div class="form-group">
+                        <label>اسم ممثل العميل</label>
+                        <input type="text" id="clientRep">
+                    </div>
+                    <div class="form-group">
+                        <label>منصب الممثل</label>
+                        <input type="text" id="clientPosition">
+                    </div>
+                    <div class="form-group">
+                        <label>رقم السجل التجاري</label>
+                        <input type="text" id="crNumber">
+                    </div>
+                    <div class="form-group">
+                        <label>عنوان الشركة</label>
+                        <input type="text" id="clientAddress">
+                    </div>
+                    <div class="form-group">
+                        <label>تاريخ بداية المراجعة</label>
+                        <input type="date" id="startDate">
+                    </div>
+                    <div class="form-group">
+                        <label>نسبة الدفع المقدم (%)</label>
+                        <input type="number" id="advancePercent" value="50">
+                    </div>
+                </div>
+                <button onclick="generateLetter()" style="width: 100%; margin-bottom: 10px;">📄 إصدار الخطاب</button>
+                <button class="secondary" onclick="closeModal('letterModal')" style="width: 100%;">إلغاء</button>
             </div>
         </div>
 
@@ -309,14 +349,14 @@
             <button onclick="logout()" style="padding: 5px 15px; margin-right: 10px;">خروج</button>
         </div>
 
-        <button class="admin-btn" onclick="showModal()">🔐 دخول المدير</button>
+        <button class="admin-btn" onclick="showModal('authModal')">🔐 دخول المدير</button>
 
         <!-- Tabs -->
         <div class="tabs">
             <div class="tab active" onclick="switchTab('calc')">🧮 حاسبة التسعير</div>
+            <div class="tab admin-only hidden" onclick="switchTab('planning')">📊 التخطيط المستقبلي</div>
             <div class="tab admin-only hidden" onclick="switchTab('costs')">💰 إدارة التكاليف</div>
-            <div class="tab admin-only hidden" onclick="switchTab('clients')">📊 العملاء</div>
-            <div class="tab admin-only hidden" onclick="switchTab('reports')">📑 التقارير</div>
+            <div class="tab admin-only hidden" onclick="switchTab('clients')">📋 العملاء</div>
         </div>
 
         <!-- Calculator Tab -->
@@ -332,7 +372,7 @@
                     </div>
                     <div class="form-group">
                         <label>سنة المراجعة</label>
-                        <input type="number" id="year" value="2024">
+                        <input type="number" id="year" value="2025">
                     </div>
                     <div class="form-group">
                         <label>حجم الإيرادات (مليون ريال)</label>
@@ -369,7 +409,7 @@
                     </div>
                     <div class="form-group">
                         <label>عدد الفروع</label>
-                        <input type="number" id="branches" value="1" min="1">
+                        <input type="number" id="branches" value="1">
                     </div>
                     <div class="form-group">
                         <label>جودة النظام المحاسبي</label>
@@ -396,7 +436,7 @@
                     </div>
                     <div class="form-group">
                         <label>عدد الحسابات البنكية</label>
-                        <input type="number" id="bankAccounts" value="1" min="1">
+                        <input type="number" id="bankAccounts" value="1">
                     </div>
                     <div class="form-group">
                         <label>معاملات عملات أجنبية</label>
@@ -449,7 +489,7 @@
                     </div>
                 </div>
 
-                <button onclick="suggest()" style="margin: 30px 0;">🔮 احسب التسعير</button>
+                <button onclick="suggest()">🔮 احسب التسعير</button>
 
                 <div id="prediction"></div>
 
@@ -488,7 +528,7 @@
                             <div class="stat-value" id="totalHours">0</div>
                         </div>
                         <div class="stat">
-                            <div class="stat-label">السعر المقترح</div>
+                            <div class="stat-label">السعر المقترح (شامل الضريبة)</div>
                             <div class="stat-value" id="totalPrice">0 ريال</div>
                         </div>
                         <div class="stat admin-only hidden">
@@ -500,7 +540,127 @@
                             <div class="stat-value" id="margin">0%</div>
                         </div>
                     </div>
-                    <button onclick="saveProposal()" style="margin-top: 20px;">💾 حفظ العرض</button>
+                    <div style="margin-top: 20px; display: flex; gap: 10px;">
+                        <button onclick="saveProposal()">💾 حفظ العرض</button>
+                        <button class="secondary" onclick="showModal('letterModal')">📄 إصدار خطاب الارتباط</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Future Planning Tab -->
+        <div id="planningTab" class="tab-content">
+            <div class="card">
+                <h2 class="card-header">التخطيط المستقبلي</h2>
+                
+                <h3 class="section-title">السيناريو المستقبلي</h3>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>ساعات العمل السنوية المتوقعة</label>
+                        <input type="number" id="futureHours" value="10000">
+                    </div>
+                </div>
+
+                <h3 class="section-title">التكاليف الشهرية المستقبلية</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>إيجار المكاتب</label>
+                        <input type="number" id="futureRent" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>صيانة وتنظيف</label>
+                        <input type="number" id="futureMaintenance" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>مرافق</label>
+                        <input type="number" id="futureUtilities" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>رواتب إدارية</label>
+                        <input type="number" id="futureAdmin" value="0">
+                    </div>
+                </div>
+
+                <h3 class="section-title">التكاليف السنوية المستقبلية</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>تأمينات</label>
+                        <input type="number" id="futureInsurance" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>استهلاك معدات</label>
+                        <input type="number" id="futureDepreciation" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>تسويق</label>
+                        <input type="number" id="futureMarketing" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>تدريب</label>
+                        <input type="number" id="futureTraining" value="0">
+                    </div>
+                </div>
+
+                <h3 class="section-title">تكلفة الرواتب المستقبلية</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>راتب ساعة الشريك</label>
+                        <input type="number" id="futurePartnerRate" value="800">
+                    </div>
+                    <div class="form-group">
+                        <label>راتب ساعة الإشراف</label>
+                        <input type="number" id="futureSupervisorRate" value="400">
+                    </div>
+                    <div class="form-group">
+                        <label>راتب ساعة العمل</label>
+                        <input type="number" id="futureStaffRate" value="150">
+                    </div>
+                </div>
+
+                <button onclick="comparePlanning()">📊 قارن الوضع الحالي بالمستقبلي</button>
+
+                <div id="planningResult" class="hidden">
+                    <div class="result-box">
+                        <div class="result-title">📈 مقارنة التخطيط</div>
+                        <table class="comparison-table">
+                            <tr>
+                                <td>البيان</td>
+                                <td>الوضع الحالي</td>
+                                <td>الوضع المستقبلي</td>
+                                <td>الفرق</td>
+                            </tr>
+                            <tr>
+                                <td>التكاليف السنوية</td>
+                                <td id="currentAnnualCost">0</td>
+                                <td id="futureAnnualCost">0</td>
+                                <td id="costDiff">0</td>
+                            </tr>
+                            <tr>
+                                <td>التحميل لكل ساعة</td>
+                                <td id="currentPerHour">0</td>
+                                <td id="futurePerHour">0</td>
+                                <td id="perHourDiff">0</td>
+                            </tr>
+                            <tr>
+                                <td>تكلفة الساعة الكاملة</td>
+                                <td id="currentFullCost">0</td>
+                                <td id="futureFullCost">0</td>
+                                <td id="fullCostDiff">0</td>
+                            </tr>
+                            <tr>
+                                <td>السعر المطلوب للعميل</td>
+                                <td id="currentClientPrice">0</td>
+                                <td id="futureClientPrice">0</td>
+                                <td id="clientPriceDiff">0</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="result-box">
+                        <div class="result-title">💡 التوصيات</div>
+                        <div id="recommendations" style="line-height: 1.8;"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -529,7 +689,7 @@
                         <input type="number" id="maintenance" value="0">
                     </div>
                     <div class="form-group">
-                        <label>مرافق (كهرباء، ماء، إنترنت)</label>
+                        <label>مرافق</label>
                         <input type="number" id="utilities" value="0">
                     </div>
                     <div class="form-group">
@@ -594,7 +754,7 @@
                     </div>
                 </div>
 
-                <div class="result-box" style="margin-top: 30px;">
+                <div class="result-box">
                     <div class="result-title">📊 ملخص التكاليف</div>
                     <div class="stats">
                         <div class="stat">
@@ -609,7 +769,6 @@
                 </div>
 
                 <button onclick="saveCosts()">💾 حفظ التكاليف</button>
-                <button class="secondary" onclick="calcCostSummary()">🔄 احسب الملخص</button>
             </div>
         </div>
 
@@ -620,14 +779,6 @@
                 <div id="clientsList"></div>
             </div>
         </div>
-
-        <!-- Reports Tab -->
-        <div id="reportsTab" class="tab-content">
-            <div class="card">
-                <h2 class="card-header">التقارير</h2>
-                <button onclick="exportClients()">📊 تقرير العملاء</button>
-            </div>
-        </div>
     </div>
 
     <script>
@@ -635,9 +786,10 @@
         let clients = JSON.parse(localStorage.getItem('clients') || '[]');
         let costs = JSON.parse(localStorage.getItem('costs') || '{}');
         let sugHours = {};
+        let currentProposal = {};
 
-        function showModal() { document.getElementById('authModal').classList.add('active'); }
-        function closeModal() { document.getElementById('authModal').classList.remove('active'); }
+        function showModal(id) { document.getElementById(id).classList.add('active'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
         function login() {
             const u = document.getElementById('adminUser').value;
@@ -646,7 +798,7 @@
                 isAdmin = true;
                 document.getElementById('adminIndicator').classList.remove('hidden');
                 document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
-                closeModal();
+                closeModal('authModal');
                 alert('تم تسجيل الدخول');
                 loadClients();
             } else {
@@ -668,6 +820,7 @@
             document.getElementById(name + 'Tab').classList.add('active');
             if (name === 'clients') loadClients();
             if (name === 'costs') loadCostsForm();
+            if (name === 'planning') loadPlanningForm();
         }
 
         function suggest() {
@@ -720,10 +873,6 @@
                             <div class="stat">
                                 <div class="stat-label">الساعات المتوقعة</div>
                                 <div class="stat-value">${base}</div>
-                            </div>
-                            <div class="stat">
-                                <div class="stat-label">العملاء المشابهين</div>
-                                <div class="stat-value">0</div>
                             </div>
                         </div>
                     </div>
@@ -783,7 +932,19 @@
             const costPerHour = avgSalary + overhead;
             const totalCost = total * costPerHour;
             const margin = parseFloat(document.getElementById('profitMargin')?.value) || 30;
-            const totalPrice = totalCost * (1 + margin / 100);
+            const priceBeforeVAT = totalCost * (1 + margin / 100);
+            const totalPrice = priceBeforeVAT * 1.15; // مع ضريبة 15%
+
+            currentProposal = {
+                totalHours: total,
+                partnerHours: p,
+                supervisorHours: s,
+                staffHours: st,
+                totalCost: totalCost,
+                priceBeforeVAT: priceBeforeVAT,
+                totalPrice: totalPrice,
+                margin: margin
+            };
 
             document.getElementById('totalHours').textContent = total.toFixed(1);
             document.getElementById('totalPrice').textContent = Math.round(totalPrice).toLocaleString() + ' ريال';
@@ -809,54 +970,122 @@
                 receivables: parseFloat(document.getElementById('receivables').value) || 0,
                 payables: parseFloat(document.getElementById('payables').value) || 0,
                 activity: document.getElementById('activity').value,
-                branches: parseInt(document.getElementById('branches').value),
-                systemQuality: document.getElementById('systemQuality').value,
-                internalControl: document.getElementById('internalControl').value,
-                clientType: document.getElementById('clientType').value,
-                bankAccounts: parseInt(document.getElementById('bankAccounts').value),
-                foreignCurrency: document.getElementById('foreignCurrency').value,
-                relatedParties: document.getElementById('relatedParties').value,
-                inventory: document.getElementById('inventory').value,
-                loans: document.getElementById('loans').value,
-                provisions: document.getElementById('provisions').value,
-                leases: document.getElementById('leases').value,
-                revenueContracts: document.getElementById('revenueContracts').value,
-                partnerHours: parseFloat(document.getElementById('adjPartner').value),
-                supervisorHours: parseFloat(document.getElementById('adjSupervisor').value),
-                staffHours: parseFloat(document.getElementById('adjStaff').value),
-                totalHours: parseFloat(document.getElementById('totalHours').textContent),
-                price: parseInt(document.getElementById('totalPrice').textContent.replace(/[^\d]/g, ''))
+                partnerHours: currentProposal.partnerHours,
+                supervisorHours: currentProposal.supervisorHours,
+                staffHours: currentProposal.staffHours,
+                totalHours: currentProposal.totalHours,
+                price: currentProposal.totalPrice
             };
 
             clients.push(client);
             localStorage.setItem('clients', JSON.stringify(clients));
             alert('تم حفظ العرض في البيانات التاريخية!');
+        }
+
+        function generateLetter() {
+            const clientName = document.getElementById('clientName').value;
+            const clientRep = document.getElementById('clientRep').value;
+            const clientPosition = document.getElementById('clientPosition').value;
+            const crNumber = document.getElementById('crNumber').value;
+            const clientAddress = document.getElementById('clientAddress').value;
+            const year = document.getElementById('year').value;
+            const advancePercent = parseFloat(document.getElementById('advancePercent').value) || 50;
+
+            if (!clientName || !clientRep || !crNumber) {
+                alert('يرجى إدخال جميع البيانات المطلوبة');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // Add Arabic font support
+            doc.addFont('https://cdn.jsdelivr.net/npm/amiri-font@1.0.0/fonts/amiri-regular.ttf', 'Amiri', 'normal');
+            doc.setFont('Amiri');
+            doc.setR2L(true);
+
+            const priceBeforeVAT = currentProposal.priceBeforeVAT || 0;
+            const vat = priceBeforeVAT * 0.15;
+            const totalPrice = priceBeforeVAT + vat;
+            const advance = totalPrice * (advancePercent / 100);
+            const remaining = totalPrice - advance;
+
+            // Header
+            doc.setFontSize(20);
+            doc.text('خطاب الارتباط', 105, 30, { align: 'center' });
             
-            // Reset form
-            document.querySelectorAll('input[type="text"], input[type="number"]').forEach(i => {
-                if (!i.id.includes('Rate') && !i.id.includes('Margin') && !i.id.includes('annual')) {
-                    i.value = i.defaultValue || '';
-                }
+            doc.setFontSize(12);
+            const today = new Date().toLocaleDateString('ar-SA');
+            doc.text(today, 180, 50);
+
+            // Client info
+            doc.text(`السادة / ${clientName}`, 180, 70);
+            doc.text(`سجل تجاري رقم: ${crNumber}`, 180, 80);
+            doc.text(`${clientAddress}، المملكة العربية السعودية`, 180, 90);
+
+            // Service description
+            doc.text(`خدمات المراجعة للسنة المنتهية في 31 ديسمبر ${year}م`, 180, 110);
+            
+            doc.setFontSize(10);
+            doc.text('سنقوم، بناءً على طلبكم، بمراجعة البيانات المالية بما يشمل:', 180, 130);
+            doc.text('• بيان المركز المالي', 180, 140);
+            doc.text('• بيان الربح أو الخسارة والدخل الشامل', 180, 150);
+            doc.text('• بيان التدفقات النقدية', 180, 160);
+
+            // Fees table
+            doc.text('قيمة الأتعاب المهنية:', 180, 180);
+            doc.autoTable({
+                startY: 190,
+                head: [['البيان', 'المبلغ']],
+                body: [
+                    ['مراجعة الحسابات (قبل الضريبة)', `${priceBeforeVAT.toFixed(0)} ريال`],
+                    ['ضريبة القيمة المضافة 15%', `${vat.toFixed(0)} ريال`],
+                    ['الإجمالي', `${totalPrice.toFixed(0)} ريال`],
+                    ['الدفعة المقدمة', `${advance.toFixed(0)} ريال (${advancePercent}%)`],
+                    ['عند إصدار التقرير', `${remaining.toFixed(0)} ريال`]
+                ],
+                theme: 'grid',
+                styles: { font: 'Amiri', halign: 'right' },
+                headStyles: { fillColor: [200, 159, 101] }
             });
-            document.getElementById('prediction').innerHTML = '';
-            document.getElementById('hoursAdjust').classList.add('hidden');
-            document.getElementById('pricing').classList.add('hidden');
+
+            // Signatures
+            const finalY = doc.lastAutoTable.finalY + 30;
+            doc.text('شركة علي فهد مسعود', 140, finalY);
+            doc.text(clientName, 40, finalY);
+            doc.text('محاسبون ومراجعون قانونيون', 140, finalY + 10);
+            doc.text(`الممثل: ${clientRep}`, 40, finalY + 10);
+            doc.text(`المنصب: ${clientPosition}`, 40, finalY + 20);
+
+            doc.save(`خطاب_ارتباط_${clientName}_${year}.pdf`);
+            closeModal('letterModal');
+            alert('تم إصدار خطاب الارتباط بنجاح!');
+        }
+
+        function loadCostsForm() {
+            ['annualHours','rent','maintenance','utilities','software','adminSalaries','supplies',
+             'insurance','depreciation','marketing','socpa','training',
+             'partnerRate','supervisorRate','staffRate','profitMargin'].forEach(key => {
+                const el = document.getElementById(key);
+                if (el && costs[key]) el.value = costs[key];
+            });
+            calcCostSummary();
         }
 
         function saveCosts() {
             costs = {
                 annualHours: parseFloat(document.getElementById('annualHours').value),
-                rent: parseFloat(document.getElementById('rent').value),
-                maintenance: parseFloat(document.getElementById('maintenance').value),
-                utilities: parseFloat(document.getElementById('utilities').value),
-                software: parseFloat(document.getElementById('software').value),
-                adminSalaries: parseFloat(document.getElementById('adminSalaries').value),
-                supplies: parseFloat(document.getElementById('supplies').value),
-                insurance: parseFloat(document.getElementById('insurance').value),
-                depreciation: parseFloat(document.getElementById('depreciation').value),
-                marketing: parseFloat(document.getElementById('marketing').value),
-                socpa: parseFloat(document.getElementById('socpa').value),
-                training: parseFloat(document.getElementById('training').value),
+                rent: parseFloat(document.getElementById('rent').value) || 0,
+                maintenance: parseFloat(document.getElementById('maintenance').value) || 0,
+                utilities: parseFloat(document.getElementById('utilities').value) || 0,
+                software: parseFloat(document.getElementById('software').value) || 0,
+                adminSalaries: parseFloat(document.getElementById('adminSalaries').value) || 0,
+                supplies: parseFloat(document.getElementById('supplies').value) || 0,
+                insurance: parseFloat(document.getElementById('insurance').value) || 0,
+                depreciation: parseFloat(document.getElementById('depreciation').value) || 0,
+                marketing: parseFloat(document.getElementById('marketing').value) || 0,
+                socpa: parseFloat(document.getElementById('socpa').value) || 0,
+                training: parseFloat(document.getElementById('training').value) || 0,
                 partnerRate: parseFloat(document.getElementById('partnerRate').value),
                 supervisorRate: parseFloat(document.getElementById('supervisorRate').value),
                 staffRate: parseFloat(document.getElementById('staffRate').value),
@@ -864,14 +1093,6 @@
             };
             localStorage.setItem('costs', JSON.stringify(costs));
             alert('تم حفظ التكاليف');
-            calcCostSummary();
-        }
-
-        function loadCostsForm() {
-            Object.keys(costs).forEach(key => {
-                const el = document.getElementById(key);
-                if (el) el.value = costs[key] || 0;
-            });
             calcCostSummary();
         }
 
@@ -884,8 +1105,109 @@
             const hours = parseFloat(document.getElementById('annualHours')?.value) || 10000;
             const perHour = total / hours;
 
-            document.getElementById('annualTotal').textContent = total.toLocaleString() + ' ريال';
-            document.getElementById('perHour').textContent = perHour.toFixed(2) + ' ريال';
+            if (document.getElementById('annualTotal'))
+                document.getElementById('annualTotal').textContent = total.toLocaleString() + ' ريال';
+            if (document.getElementById('perHour'))
+                document.getElementById('perHour').textContent = perHour.toFixed(2) + ' ريال';
+        }
+
+        function loadPlanningForm() {
+            // Copy current values to future fields
+            document.getElementById('futureHours').value = costs.annualHours || 10000;
+            document.getElementById('futureRent').value = costs.rent || 0;
+            document.getElementById('futureMaintenance').value = costs.maintenance || 0;
+            document.getElementById('futureUtilities').value = costs.utilities || 0;
+            document.getElementById('futureAdmin').value = costs.adminSalaries || 0;
+            document.getElementById('futureInsurance').value = costs.insurance || 0;
+            document.getElementById('futureDepreciation').value = costs.depreciation || 0;
+            document.getElementById('futureMarketing').value = costs.marketing || 0;
+            document.getElementById('futureTraining').value = costs.training || 0;
+            document.getElementById('futurePartnerRate').value = costs.partnerRate || 800;
+            document.getElementById('futureSupervisorRate').value = costs.supervisorRate || 400;
+            document.getElementById('futureStaffRate').value = costs.staffRate || 150;
+        }
+
+        function comparePlanning() {
+            // Current scenario
+            const currentMonthly = (costs.rent + costs.maintenance + costs.utilities + 
+                                   costs.adminSalaries) * 12;
+            const currentAnnual = costs.insurance + costs.depreciation + costs.marketing + costs.training;
+            const currentTotal = currentMonthly + currentAnnual;
+            const currentHours = costs.annualHours || 10000;
+            const currentOverhead = currentTotal / currentHours;
+            const currentAvgSalary = ((costs.partnerRate || 800) + (costs.supervisorRate || 400) + 
+                                     (costs.staffRate || 150)) / 3;
+            const currentFullCost = currentAvgSalary + currentOverhead;
+            const currentPrice = currentFullCost * (1 + (costs.profitMargin || 30) / 100);
+
+            // Future scenario
+            const futureMonthly = (parseFloat(document.getElementById('futureRent').value) +
+                                  parseFloat(document.getElementById('futureMaintenance').value) +
+                                  parseFloat(document.getElementById('futureUtilities').value) +
+                                  parseFloat(document.getElementById('futureAdmin').value)) * 12;
+            const futureAnnual = parseFloat(document.getElementById('futureInsurance').value) +
+                                parseFloat(document.getElementById('futureDepreciation').value) +
+                                parseFloat(document.getElementById('futureMarketing').value) +
+                                parseFloat(document.getElementById('futureTraining').value);
+            const futureTotal = futureMonthly + futureAnnual;
+            const futureHours = parseFloat(document.getElementById('futureHours').value) || 10000;
+            const futureOverhead = futureTotal / futureHours;
+            const futureAvgSalary = (parseFloat(document.getElementById('futurePartnerRate').value) +
+                                    parseFloat(document.getElementById('futureSupervisorRate').value) +
+                                    parseFloat(document.getElementById('futureStaffRate').value)) / 3;
+            const futureFullCost = futureAvgSalary + futureOverhead;
+            const futurePrice = futureFullCost * (1 + (costs.profitMargin || 30) / 100);
+
+            // Calculate differences
+            const costDiff = ((futureTotal - currentTotal) / currentTotal * 100).toFixed(1);
+            const perHourDiff = ((futureOverhead - currentOverhead) / currentOverhead * 100).toFixed(1);
+            const fullCostDiff = ((futureFullCost - currentFullCost) / currentFullCost * 100).toFixed(1);
+            const priceDiff = ((futurePrice - currentPrice) / currentPrice * 100).toFixed(1);
+
+            // Display comparison
+            document.getElementById('currentAnnualCost').textContent = currentTotal.toLocaleString() + ' ريال';
+            document.getElementById('futureAnnualCost').textContent = futureTotal.toLocaleString() + ' ريال';
+            document.getElementById('costDiff').innerHTML = `<span class="${costDiff > 0 ? 'increase' : 'decrease'}">${costDiff}%</span>`;
+
+            document.getElementById('currentPerHour').textContent = currentOverhead.toFixed(2) + ' ريال';
+            document.getElementById('futurePerHour').textContent = futureOverhead.toFixed(2) + ' ريال';
+            document.getElementById('perHourDiff').innerHTML = `<span class="${perHourDiff > 0 ? 'increase' : 'decrease'}">${perHourDiff}%</span>`;
+
+            document.getElementById('currentFullCost').textContent = currentFullCost.toFixed(0) + ' ريال';
+            document.getElementById('futureFullCost').textContent = futureFullCost.toFixed(0) + ' ريال';
+            document.getElementById('fullCostDiff').innerHTML = `<span class="${fullCostDiff > 0 ? 'increase' : 'decrease'}">${fullCostDiff}%</span>`;
+
+            document.getElementById('currentClientPrice').textContent = currentPrice.toFixed(0) + ' ريال';
+            document.getElementById('futureClientPrice').textContent = futurePrice.toFixed(0) + ' ريال';
+            document.getElementById('clientPriceDiff').innerHTML = `<span class="${priceDiff > 0 ? 'increase' : 'decrease'}">${priceDiff}%</span>`;
+
+            // Recommendations
+            let recommendations = '<ul style="padding-right: 20px;">';
+            
+            if (parseFloat(priceDiff) > 20) {
+                recommendations += '<li>⚠️ الزيادة في السعر أكثر من 20% - قد تؤثر على القدرة التنافسية</li>';
+                recommendations += '<li>💡 فكر في زيادة الساعات القابلة للفوترة لتخفيف التأثير</li>';
+            } else if (parseFloat(priceDiff) > 10) {
+                recommendations += '<li>✅ الزيادة معقولة ويمكن تبريرها بالتوسع والتحسينات</li>';
+            } else {
+                recommendations += '<li>✅ التأثير على السعر منخفض ومقبول</li>';
+            }
+
+            const clientsNeeded = Math.ceil(futureTotal / futurePrice);
+            recommendations += `<li>📊 تحتاج إلى حوالي ${clientsNeeded} عميل سنوياً لتغطية التكاليف الجديدة</li>`;
+
+            const hoursNeeded = Math.ceil(futureTotal / futureFullCost);
+            recommendations += `<li>⏱️ تحتاج إلى ${hoursNeeded} ساعة عمل مباشر سنوياً لتحقيق نقطة التعادل</li>`;
+
+            if (futureHours > currentHours) {
+                const increasePercent = ((futureHours - currentHours) / currentHours * 100).toFixed(0);
+                recommendations += `<li>📈 زيادة الساعات المتاحة بنسبة ${increasePercent}% - ممتاز للنمو!</li>`;
+            }
+
+            recommendations += '</ul>';
+            document.getElementById('recommendations').innerHTML = recommendations;
+
+            document.getElementById('planningResult').classList.remove('hidden');
         }
 
         function loadClients() {
@@ -901,12 +1223,10 @@
             document.getElementById('clientsList').innerHTML = html;
         }
 
-        function exportClients() {
-            alert('سيتم تصدير التقرير قريباً');
-        }
-
         // Load costs on page load
-        loadCostsForm();
+        if (Object.keys(costs).length > 0) {
+            loadCostsForm();
+        }
     </script>
 </body>
 </html>
