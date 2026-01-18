@@ -784,8 +784,52 @@
         <!-- Clients Tab -->
         <div id="clientsTab" class="tab-content">
             <div class="card">
-                <h2 class="card-header">العملاء المنفذين</h2>
+                <h2 class="card-header">البيانات التاريخية للعملاء</h2>
+                
+                <div class="form-grid" style="margin-bottom: 20px;">
+                    <div class="form-group">
+                        <label>بحث</label>
+                        <input type="text" id="searchClients" placeholder="اسم العميل، النشاط..." onkeyup="filterClients()">
+                    </div>
+                    <div class="form-group">
+                        <label>تصفية حسب النشاط</label>
+                        <select id="filterActivity" onchange="filterClients()">
+                            <option value="">الكل</option>
+                            <option value="تجاري">تجاري</option>
+                            <option value="صناعي">صناعي</option>
+                            <option value="خدمي">خدمي</option>
+                            <option value="مالي">مالي</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>تصفية حسب السنة</label>
+                        <select id="filterYear" onchange="filterClients()">
+                            <option value="">الكل</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="result-box">
+                    <div class="result-title">📊 إحصائيات</div>
+                    <div class="stats">
+                        <div class="stat">
+                            <div class="stat-label">إجمالي العملاء</div>
+                            <div class="stat-value" id="totalClients">0</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">متوسط الساعات</div>
+                            <div class="stat-value" id="avgHours">0</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">متوسط السعر</div>
+                            <div class="stat-value" id="avgPrice">0 ريال</div>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="clientsList"></div>
+                
+                <button class="secondary" onclick="exportClients()" style="margin-top: 20px;">📥 تصدير Excel</button>
             </div>
         </div>
     </div>
@@ -833,80 +877,215 @@
         }
 
         function suggest() {
-            const rev = parseFloat(document.getElementById('revenue').value) || 0;
-            const ast = parseFloat(document.getElementById('assets').value) || 0;
-            const act = document.getElementById('activity').value;
-            const fix = parseFloat(document.getElementById('fixedAssets').value) || 0;
-            const rec = parseFloat(document.getElementById('receivables').value) || 0;
-            const pay = parseFloat(document.getElementById('payables').value) || 0;
+            const clientData = {
+                revenue: parseFloat(document.getElementById('revenue').value) || 0,
+                assets: parseFloat(document.getElementById('assets').value) || 0,
+                fixedAssets: parseFloat(document.getElementById('fixedAssets').value) || 0,
+                receivables: parseFloat(document.getElementById('receivables').value) || 0,
+                payables: parseFloat(document.getElementById('payables').value) || 0,
+                activity: document.getElementById('activity').value,
+                branches: parseInt(document.getElementById('branches').value) || 1,
+                systemQuality: document.getElementById('systemQuality').value,
+                internalControl: document.getElementById('internalControl').value,
+                clientType: document.getElementById('clientType').value,
+                bankAccounts: parseInt(document.getElementById('bankAccounts').value) || 1,
+                foreignCurrency: document.getElementById('foreignCurrency').value,
+                relatedParties: document.getElementById('relatedParties').value,
+                inventory: document.getElementById('inventory').value,
+                loans: document.getElementById('loans').value,
+                provisions: document.getElementById('provisions').value,
+                leases: document.getElementById('leases').value,
+                revenueContracts: document.getElementById('revenueContracts').value
+            };
 
-            if (rev === 0 || ast === 0) {
-                alert('أدخل الإيرادات والأصول');
+            if (clientData.revenue === 0 || clientData.assets === 0) {
+                alert('أدخل الإيرادات والأصول على الأقل');
                 return;
             }
 
-            const similar = clients.filter(c => {
-                const rd = Math.abs(c.revenue - rev) / rev;
-                const ad = Math.abs(c.assets - ast) / ast;
-                return c.activity === act && rd < 0.3 && ad < 0.3;
+            // Find similar clients (±10% for numeric fields)
+            const similarClients = clients.filter(c => {
+                // Must match activity
+                if (c.activity !== clientData.activity) return false;
+
+                // Check numeric fields (±10%)
+                const fields = ['revenue', 'assets', 'fixedAssets', 'receivables', 'payables'];
+                let matchCount = 0;
+                let totalFields = 0;
+
+                fields.forEach(field => {
+                    if (clientData[field] > 0) {
+                        totalFields++;
+                        const diff = Math.abs(c[field] - clientData[field]) / clientData[field];
+                        if (diff <= 0.10) { // Within 10%
+                            matchCount++;
+                        }
+                    }
+                });
+
+                // At least 60% of numeric fields must match
+                const matchRatio = totalFields > 0 ? (matchCount / totalFields) : 0;
+                if (matchRatio < 0.6) return false;
+
+                // Check categorical fields - bonus points for exact matches
+                let bonusScore = 0;
+                if (c.branches === clientData.branches) bonusScore++;
+                if (c.systemQuality === clientData.systemQuality) bonusScore++;
+                if (c.internalControl === clientData.internalControl) bonusScore++;
+                if (c.clientType === clientData.clientType) bonusScore++;
+                if (c.bankAccounts === clientData.bankAccounts) bonusScore++;
+                if (c.foreignCurrency === clientData.foreignCurrency) bonusScore++;
+                if (c.relatedParties === clientData.relatedParties) bonusScore++;
+                if (c.inventory === clientData.inventory) bonusScore++;
+                if (c.loans === clientData.loans) bonusScore++;
+                if (c.provisions === clientData.provisions) bonusScore++;
+                if (c.leases === clientData.leases) bonusScore++;
+                if (c.revenueContracts === clientData.revenueContracts) bonusScore++;
+
+                // Store similarity score for ranking
+                c.similarityScore = matchRatio + (bonusScore * 0.05);
+                return true;
             });
 
             let p, s, st;
-            if (similar.length === 0) {
+            
+            if (similarClients.length === 0) {
+                // No similar clients - use formula-based estimation
                 let base = 40;
-                if (rev > 100) base += 30; else if (rev > 50) base += 20;
-                if (ast > 200) base += 25; else if (ast > 100) base += 15;
-                if (act === 'مالي') base += 30; else if (act === 'صناعي') base += 20;
-                if (fix > 50) base += 20; else if (fix > 20) base += 12;
-                if (rec > 30) base += 15; else if (rec > 15) base += 10;
-                if (pay > 30) base += 12; else if (pay > 15) base += 8;
-                base += (parseInt(document.getElementById('branches').value) - 1) * 5;
-                if (document.getElementById('systemQuality').value === 'ضعيف') base += 20;
-                if (document.getElementById('internalControl').value === 'ضعيف') base += 15;
-                if (document.getElementById('clientType').value === 'جديد') base += 15;
-                base += (parseInt(document.getElementById('bankAccounts').value) - 1) * 3;
-                if (document.getElementById('foreignCurrency').value === 'نعم') base += 10;
-                if (document.getElementById('relatedParties').value === 'نعم') base += 12;
-                if (document.getElementById('inventory').value === 'نعم') base += 15;
-                if (document.getElementById('loans').value === 'نعم') base += 12;
-                if (document.getElementById('provisions').value === 'نعم') base += 10;
-                if (document.getElementById('leases').value === 'نعم') base += 18;
-                if (document.getElementById('revenueContracts').value === 'نعم') base += 16;
+                
+                // Revenue impact
+                if (clientData.revenue > 100) base += 30;
+                else if (clientData.revenue > 50) base += 20;
+                else if (clientData.revenue > 20) base += 10;
+                
+                // Assets impact
+                if (clientData.assets > 200) base += 25;
+                else if (clientData.assets > 100) base += 15;
+                else if (clientData.assets > 50) base += 8;
+                
+                // Activity complexity
+                if (clientData.activity === 'مالي') base += 30;
+                else if (clientData.activity === 'صناعي') base += 20;
+                else if (clientData.activity === 'تجاري') base += 10;
+                
+                // Fixed assets
+                if (clientData.fixedAssets > 50) base += 20;
+                else if (clientData.fixedAssets > 20) base += 12;
+                else if (clientData.fixedAssets > 5) base += 6;
+                
+                // Receivables & Payables
+                if (clientData.receivables > 30) base += 15;
+                else if (clientData.receivables > 15) base += 10;
+                if (clientData.payables > 30) base += 12;
+                else if (clientData.payables > 15) base += 8;
+                
+                // Other factors
+                base += (clientData.branches - 1) * 5;
+                base += (clientData.bankAccounts - 1) * 3;
+                
+                if (clientData.systemQuality === 'ضعيف') base += 20;
+                else if (clientData.systemQuality === 'متوسط') base += 10;
+                
+                if (clientData.internalControl === 'ضعيف') base += 15;
+                else if (clientData.internalControl === 'متوسط') base += 8;
+                
+                if (clientData.clientType === 'جديد') base += 15;
+                
+                if (clientData.foreignCurrency === 'نعم') base += 10;
+                if (clientData.relatedParties === 'نعم') base += 12;
+                if (clientData.inventory === 'نعم') base += 15;
+                if (clientData.loans === 'نعم') base += 12;
+                if (clientData.provisions === 'نعم') base += 10;
+                if (clientData.leases === 'نعم') base += 18;
+                if (clientData.revenueContracts === 'نعم') base += 16;
+                
                 p = Math.round(base * 0.15);
                 s = Math.round(base * 0.25);
                 st = base - p - s;
+                
                 document.getElementById('prediction').innerHTML = `
                     <div class="result-box">
-                        <div class="result-title">🔮 التوقع الأساسي</div>
+                        <div class="result-title">🔮 التوقع الأساسي (بدون بيانات مشابهة)</div>
+                        <p style="color: #B8B8B8; margin-bottom: 15px;">لا توجد عملاء مشابهون في البيانات التاريخية. التوقع مبني على الخوارزمية الأساسية.</p>
                         <div class="stats">
                             <div class="stat">
                                 <div class="stat-label">الساعات المتوقعة</div>
                                 <div class="stat-value">${base}</div>
                             </div>
+                            <div class="stat">
+                                <div class="stat-label">شريك</div>
+                                <div class="stat-value">${p}</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-label">إشراف</div>
+                                <div class="stat-value">${s}</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-label">عمل</div>
+                                <div class="stat-value">${st}</div>
+                            </div>
                         </div>
                     </div>
                 `;
             } else {
-                const ap = similar.reduce((sum, c) => sum + c.partnerHours, 0) / similar.length;
-                const as = similar.reduce((sum, c) => sum + c.supervisorHours, 0) / similar.length;
-                const ast = similar.reduce((sum, c) => sum + c.staffHours, 0) / similar.length;
-                p = Math.round(ap);
-                s = Math.round(as);
-                st = Math.round(ast);
+                // Sort by similarity score
+                similarClients.sort((a, b) => b.similarityScore - a.similarityScore);
+                
+                // Calculate weighted average (higher weight for more similar clients)
+                let totalWeight = 0;
+                let weightedPartner = 0;
+                let weightedSupervisor = 0;
+                let weightedStaff = 0;
+                
+                similarClients.forEach((c, index) => {
+                    const weight = 1 / (index + 1); // Higher weight for more similar
+                    totalWeight += weight;
+                    weightedPartner += c.partnerHours * weight;
+                    weightedSupervisor += c.supervisorHours * weight;
+                    weightedStaff += c.staffHours * weight;
+                });
+                
+                p = Math.round(weightedPartner / totalWeight);
+                s = Math.round(weightedSupervisor / totalWeight);
+                st = Math.round(weightedStaff / totalWeight);
+                
+                // Show top 3 similar clients
+                let similarTable = '<table style="margin-top: 15px; font-size: 0.9em;"><thead><tr><th>العميل</th><th>التشابه</th><th>الساعات</th></tr></thead><tbody>';
+                similarClients.slice(0, 3).forEach(c => {
+                    const similarity = (c.similarityScore * 100).toFixed(0);
+                    similarTable += `<tr><td>${c.name}</td><td>${similarity}%</td><td>${c.totalHours}</td></tr>`;
+                });
+                similarTable += '</tbody></table>';
+                
                 document.getElementById('prediction').innerHTML = `
                     <div class="result-box">
-                        <div class="result-title">🎯 توقع ذكي</div>
+                        <div class="result-title">🎯 توقع ذكي من البيانات التاريخية</div>
+                        <p style="color: var(--accent); margin-bottom: 15px;">
+                            تم إيجاد <strong>${similarClients.length}</strong> عميل مشابه بنسبة تطابق عالية
+                        </p>
                         <div class="stats">
                             <div class="stat">
                                 <div class="stat-label">الساعات المتوقعة</div>
                                 <div class="stat-value">${p + s + st}</div>
                             </div>
                             <div class="stat">
-                                <div class="stat-label">العملاء المشابهين</div>
-                                <div class="stat-value">${similar.length}</div>
+                                <div class="stat-label">شريك</div>
+                                <div class="stat-value">${p}</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-label">إشراف</div>
+                                <div class="stat-value">${s}</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-label">عمل</div>
+                                <div class="stat-value">${st}</div>
                             </div>
                         </div>
-                        <p style="margin-top:15px;color:var(--secondary)">شريك: ${p} | إشراف: ${s} | عمل: ${st}</p>
+                        
+                        <div style="margin-top: 20px;">
+                            <h4 style="color: var(--secondary); margin-bottom: 10px;">أكثر 3 عملاء تشابهاً:</h4>
+                            ${similarTable}
+                        </div>
                     </div>
                 `;
             }
@@ -969,16 +1148,41 @@
                 return;
             }
 
+            if (!currentProposal.totalHours) {
+                alert('احسب التسعير أولاً');
+                return;
+            }
+
             const client = {
                 id: Date.now(),
                 name,
                 year: document.getElementById('year').value,
+                
+                // Financial data
                 revenue: parseFloat(document.getElementById('revenue').value) || 0,
                 assets: parseFloat(document.getElementById('assets').value) || 0,
                 fixedAssets: parseFloat(document.getElementById('fixedAssets').value) || 0,
                 receivables: parseFloat(document.getElementById('receivables').value) || 0,
                 payables: parseFloat(document.getElementById('payables').value) || 0,
+                
+                // Activity & complexity
                 activity: document.getElementById('activity').value,
+                branches: parseInt(document.getElementById('branches').value) || 1,
+                systemQuality: document.getElementById('systemQuality').value,
+                internalControl: document.getElementById('internalControl').value,
+                clientType: document.getElementById('clientType').value,
+                
+                // Additional factors
+                bankAccounts: parseInt(document.getElementById('bankAccounts').value) || 1,
+                foreignCurrency: document.getElementById('foreignCurrency').value,
+                relatedParties: document.getElementById('relatedParties').value,
+                inventory: document.getElementById('inventory').value,
+                loans: document.getElementById('loans').value,
+                provisions: document.getElementById('provisions').value,
+                leases: document.getElementById('leases').value,
+                revenueContracts: document.getElementById('revenueContracts').value,
+                
+                // Hours & pricing
                 partnerHours: currentProposal.partnerHours,
                 supervisorHours: currentProposal.supervisorHours,
                 staffHours: currentProposal.staffHours,
@@ -988,7 +1192,21 @@
 
             clients.push(client);
             localStorage.setItem('clients', JSON.stringify(clients));
-            alert('تم حفظ العرض في البيانات التاريخية!');
+            alert('✅ تم حفظ العرض في البيانات التاريخية!\n\nالآن يمكن استخدام هذا العميل كمرجع للعملاء المشابهين في المستقبل.');
+            
+            // Reset form
+            document.querySelectorAll('input[type="text"], input[type="number"]').forEach(i => {
+                if (!i.id.includes('Rate') && !i.id.includes('Margin') && !i.id.includes('annual') && 
+                    !i.id.includes('rent') && !i.id.includes('maintenance') && !i.id.includes('utilities') &&
+                    !i.id.includes('software') && !i.id.includes('adminSalaries') && !i.id.includes('supplies') &&
+                    !i.id.includes('insurance') && !i.id.includes('depreciation') && !i.id.includes('marketing') &&
+                    !i.id.includes('socpa') && !i.id.includes('training')) {
+                    i.value = i.defaultValue || '';
+                }
+            });
+            document.getElementById('prediction').innerHTML = '';
+            document.getElementById('hoursAdjust').classList.add('hidden');
+            document.getElementById('pricing').classList.add('hidden');
         }
 
         function generateArabicLetter() {
@@ -1484,15 +1702,143 @@
 
         function loadClients() {
             if (clients.length === 0) {
-                document.getElementById('clientsList').innerHTML = '<p style="text-align:center;color:var(--primary)">لا توجد بيانات</p>';
+                document.getElementById('clientsList').innerHTML = '<p style="text-align:center;color:var(--primary);padding:40px;">لا توجد بيانات تاريخية بعد. ابدأ بإضافة عملاء من حاسبة التسعير!</p>';
                 return;
             }
-            let html = '<table><thead><tr><th>العميل</th><th>السنة</th><th>النشاط</th><th>الإيرادات</th><th>الساعات</th><th>السعر</th></tr></thead><tbody>';
+
+            // Update stats
+            document.getElementById('totalClients').textContent = clients.length;
+            const avgHours = (clients.reduce((sum, c) => sum + (c.totalHours || 0), 0) / clients.length).toFixed(1);
+            const avgPrice = Math.round(clients.reduce((sum, c) => sum + (c.price || 0), 0) / clients.length);
+            document.getElementById('avgHours').textContent = avgHours;
+            document.getElementById('avgPrice').textContent = avgPrice.toLocaleString() + ' ريال';
+
+            // Populate year filter
+            const years = [...new Set(clients.map(c => c.year))].sort().reverse();
+            const yearFilter = document.getElementById('filterYear');
+            yearFilter.innerHTML = '<option value="">الكل</option>' + 
+                years.map(y => `<option value="${y}">${y}</option>`).join('');
+
+            // Display table
+            let html = `
+                <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>العميل</th>
+                            <th>السنة</th>
+                            <th>النشاط</th>
+                            <th>الإيرادات (م.ر)</th>
+                            <th>الأصول (م.ر)</th>
+                            <th>ساعات الشريك</th>
+                            <th>ساعات الإشراف</th>
+                            <th>ساعات العمل</th>
+                            <th>إجمالي الساعات</th>
+                            <th>السعر (ريال)</th>
+                            <th>التاريخ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="clientsTableBody">
+            `;
+            
             clients.forEach(c => {
-                html += `<tr><td>${c.name}</td><td>${c.year}</td><td>${c.activity}</td><td>${c.revenue}</td><td>${c.totalHours}</td><td>${c.price.toLocaleString()}</td></tr>`;
+                const date = new Date(c.id).toLocaleDateString('ar-SA');
+                html += `
+                    <tr class="client-row" 
+                        data-name="${c.name}" 
+                        data-activity="${c.activity}" 
+                        data-year="${c.year}">
+                        <td><strong>${c.name}</strong></td>
+                        <td>${c.year}</td>
+                        <td>${c.activity}</td>
+                        <td>${c.revenue || 0}</td>
+                        <td>${c.assets || 0}</td>
+                        <td>${c.partnerHours || 0}</td>
+                        <td>${c.supervisorHours || 0}</td>
+                        <td>${c.staffHours || 0}</td>
+                        <td><strong>${c.totalHours || 0}</strong></td>
+                        <td><strong>${(c.price || 0).toLocaleString()}</strong></td>
+                        <td style="font-size: 0.9em; color: #B8B8B8;">${date}</td>
+                    </tr>
+                `;
             });
-            html += '</tbody></table>';
+            
+            html += '</tbody></table></div>';
             document.getElementById('clientsList').innerHTML = html;
+        }
+
+        function filterClients() {
+            const searchTerm = document.getElementById('searchClients').value.toLowerCase();
+            const activityFilter = document.getElementById('filterActivity').value;
+            const yearFilter = document.getElementById('filterYear').value;
+
+            const rows = document.querySelectorAll('.client-row');
+            let visibleCount = 0;
+
+            rows.forEach(row => {
+                const name = row.dataset.name.toLowerCase();
+                const activity = row.dataset.activity;
+                const year = row.dataset.year;
+
+                const matchSearch = name.includes(searchTerm) || activity.includes(searchTerm);
+                const matchActivity = !activityFilter || activity === activityFilter;
+                const matchYear = !yearFilter || year === yearFilter;
+
+                if (matchSearch && matchActivity && matchYear) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            // Update total count
+            if (visibleCount !== clients.length) {
+                document.getElementById('totalClients').textContent = `${visibleCount} من ${clients.length}`;
+            } else {
+                document.getElementById('totalClients').textContent = clients.length;
+            }
+        }
+
+        function exportClients() {
+            if (clients.length === 0) {
+                alert('لا توجد بيانات لتصديرها');
+                return;
+            }
+
+            // Create CSV content
+            const headers = ['العميل', 'السنة', 'النشاط', 'الإيرادات', 'الأصول', 'ساعات الشريك', 'ساعات الإشراف', 'ساعات العمل', 'إجمالي الساعات', 'السعر', 'التاريخ'];
+            
+            let csv = '\uFEFF' + headers.join(',') + '\n'; // BOM for Excel Arabic support
+            
+            clients.forEach(c => {
+                const date = new Date(c.id).toLocaleDateString('ar-SA');
+                const row = [
+                    c.name,
+                    c.year,
+                    c.activity,
+                    c.revenue || 0,
+                    c.assets || 0,
+                    c.partnerHours || 0,
+                    c.supervisorHours || 0,
+                    c.staffHours || 0,
+                    c.totalHours || 0,
+                    c.price || 0,
+                    date
+                ];
+                csv += row.join(',') + '\n';
+            });
+
+            // Download
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `العملاء_التاريخيين_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
         }
 
         // Backup Functions
