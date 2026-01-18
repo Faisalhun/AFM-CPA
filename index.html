@@ -339,7 +339,8 @@
                         <input type="number" id="advancePercent" value="50">
                     </div>
                 </div>
-                <button onclick="generateLetter()" style="width: 100%; margin-bottom: 10px;">📄 إصدار الخطاب</button>
+                <button onclick="generateLetter()" style="width: 100%; margin-bottom: 10px;">📄 إصدار PDF (إنجليزي)</button>
+                <button onclick="generateWordLetter()" style="width: 100%; margin-bottom: 10px;">📄 إصدار Word (عربي)</button>
                 <button class="secondary" onclick="closeModal('letterModal')" style="width: 100%;">إلغاء</button>
             </div>
         </div>
@@ -540,9 +541,10 @@
                             <div class="stat-value" id="margin">0%</div>
                         </div>
                     </div>
-                    <div style="margin-top: 20px; display: flex; gap: 10px;">
+                    <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
                         <button onclick="saveProposal()">💾 حفظ العرض</button>
-                        <button class="secondary" onclick="showModal('letterModal')">📄 إصدار خطاب الارتباط</button>
+                        <button class="secondary" onclick="showModal('letterModal')">📄 خطاب ارتباط (PDF إنجليزي)</button>
+                        <button class="secondary" onclick="generateArabicLetter()">📄 خطاب ارتباط (Word عربي)</button>
                     </div>
                 </div>
             </div>
@@ -989,6 +991,246 @@
             alert('تم حفظ العرض في البيانات التاريخية!');
         }
 
+        function generateArabicLetter() {
+            const clientName = document.getElementById('clientName').value;
+            const year = document.getElementById('year').value;
+
+            if (!clientName) {
+                alert('يرجى إدخال اسم العميل أولاً');
+                return;
+            }
+
+            if (!currentProposal.totalPrice) {
+                alert('يرجى حساب التسعير أولاً');
+                return;
+            }
+
+            // Show modal for additional data
+            showModal('letterModal');
+        }
+
+        function generateWordLetter() {
+            const clientName = document.getElementById('clientName').value;
+            const clientRep = document.getElementById('clientRep').value;
+            const clientPosition = document.getElementById('clientPosition').value;
+            const crNumber = document.getElementById('crNumber').value;
+            const clientAddress = document.getElementById('clientAddress').value;
+            const year = document.getElementById('year').value;
+            const startDate = document.getElementById('startDate').value;
+            const advancePercent = parseFloat(document.getElementById('advancePercent').value) || 50;
+
+            if (!clientName || !clientRep || !crNumber || !clientAddress) {
+                alert('يرجى إدخال جميع البيانات المطلوبة');
+                return;
+            }
+
+            const priceBeforeVAT = currentProposal.priceBeforeVAT || 0;
+            const vat = priceBeforeVAT * 0.15;
+            const totalPrice = priceBeforeVAT + vat;
+            const advance = totalPrice * (advancePercent / 100);
+            const remaining = totalPrice - advance;
+            const today = new Date().toLocaleDateString('ar-SA');
+            const startYear = startDate ? new Date(startDate).getFullYear() : year;
+
+            // Create HTML for Word
+            const html = `
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: 'Simplified Arabic', 'Arial', sans-serif;
+            direction: rtl;
+            text-align: right;
+            line-height: 1.8;
+            padding: 40px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            font-size: 24pt;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .date {
+            text-align: right;
+            margin-bottom: 20px;
+        }
+        .client-info {
+            margin: 20px 0;
+            line-height: 2;
+        }
+        .section-title {
+            font-weight: bold;
+            font-size: 12pt;
+            margin: 20px 0 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        table, th, td {
+            border: 1px solid #000;
+        }
+        th, td {
+            padding: 10px;
+            text-align: right;
+        }
+        th {
+            background-color: #C89F65;
+            font-weight: bold;
+        }
+        .signature-table {
+            margin-top: 40px;
+        }
+        .signature-table td {
+            vertical-align: top;
+            height: 100px;
+        }
+        p {
+            text-align: justify;
+            margin: 10px 0;
+        }
+        ul {
+            margin: 10px 0 10px 30px;
+        }
+        li {
+            margin: 8px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="date">${today}</div>
+    
+    <div class="header">
+        <h1>خطاب الارتباط</h1>
+    </div>
+
+    <div class="client-info">
+        <p><strong>السادة / ${clientName}</strong> المحترمين</p>
+        <p>سجل تجاري رقم: ${crNumber}</p>
+        <p>${clientAddress}، المملكة العربية السعودية</p>
+    </div>
+
+    <div class="section-title">خدمات المراجعة للسنة المنتهية في 31 ديسمبر ${year}م</div>
+
+    <p>سنقوم، بناء على طلبكم، بمراجعة البيانات المالية ل${clientName} والتي تشمل بيان المركز المالي المنتهي في 31 ديسمبر ${year}م، وبيان الربح أو الخسارة والدخل الشامل الآخر، وبيان التغيرات في حقوق المساهمين وبيان التدفقات النقدية للسنة المنتهية في ذلك التاريخ، والإيضاحات حول البيانات المالية، بما في ذلك ملخص السياسات المحاسبية الهامة. يسعدنا أن نؤكد لكم قبولنا وفهمنا لهذه المهمة من خلال هذا الخطاب.</p>
+
+    <p>إن أهداف مراجعتنا هي الحصول على تأكيد معقول حول ما إذا كانت البيانات المالية ككل خالية من الأخطاء الجوهرية، سواء كانت ناتجة عن الاحتيال أو الخطأ، وإصدار تقرير مراجع الحسابات الذي يتضمن رأينا.</p>
+
+    <div class="section-title">مسؤوليات مراجع الحسابات:</div>
+    <p>سنقوم بمراجعة الحسابات وفقًا لمعايير المراجعة الدولية. تتطلب هذه المعايير أن نلتزم بالمتطلبات الأخلاقية. كما نقوم أيضاً بما يلي:</p>
+    <ul>
+        <li>تحديد وتقييم مخاطر الأخطاء الجوهرية في البيانات المالية</li>
+        <li>الحصول على فهم للرقابة الداخلية ذات الصلة بالمراجعة</li>
+        <li>تقييم ملاءمة السياسات المحاسبية المستخدمة</li>
+        <li>استنتاج مدى ملاءمة استخدام الإدارة لمبدأ الاستمرارية المحاسبي</li>
+    </ul>
+
+    <div class="section-title">مسؤوليات الإدارة والمكلفين بالحوكمة:</div>
+    <p>سيتم إجراء المراجعة على أساس أن الإدارة تقر وتفهم أنها تتحمل المسؤولية المتعلقة بما يلي:</p>
+    <ul>
+        <li>إعداد وعرض البيانات المالية بشكل عادل وفقا لمعايير التقارير المالية الدولية (IFRS)</li>
+        <li>الضوابط الداخلية الضرورية لإعداد البيانات المالية الخالية من الأخطاء الجوهرية</li>
+        <li>تزويدنا بجميع المعلومات والوثائق اللازمة للمراجعة</li>
+    </ul>
+
+    <div class="section-title">قيمة الأتعاب المهنية وطريقة السداد:</div>
+    
+    <table>
+        <tr>
+            <th>البيان</th>
+            <th>الأتعاب</th>
+            <th>الدفع</th>
+        </tr>
+        <tr>
+            <td>مراجعة الحسابات السنوية المنتهية في 31 ديسمبر ${year}م</td>
+            <td>${priceBeforeVAT.toFixed(0).toLocaleString()} ريال</td>
+            <td>${advancePercent}% عند التعاقد<br>${100 - advancePercent}% عند إصدار التقرير</td>
+        </tr>
+        <tr>
+            <td>ضريبة القيمة المضافة 15% – رقم ضريبي ٣١١٦٣٥٧٤٧٩٠٠٠٠٣</td>
+            <td>${vat.toFixed(0).toLocaleString()} ريال</td>
+            <td>${advancePercent}% عند التعاقد<br>${100 - advancePercent}% عند إصدار التقرير</td>
+        </tr>
+        <tr>
+            <td><strong>الإجمالي</strong></td>
+            <td><strong>${totalPrice.toFixed(0).toLocaleString()} ريال</strong></td>
+            <td>${advancePercent}% عند التعاقد<br>${100 - advancePercent}% عند إصدار التقرير</td>
+        </tr>
+    </table>
+
+    <p>يتم السداد من خلال شيك لأمر (شركة علي فهد مسعود محاسبون ومراجعون قانونيون) أو تحويل مصرفي حسب البيانات التالية:</p>
+
+    <table>
+        <tr>
+            <td><strong>إسم المستفيد</strong></td>
+            <td>شركة علي فهد مسعود محاسبون ومراجعون قانونيون</td>
+        </tr>
+        <tr>
+            <td><strong>إسم البنك</strong></td>
+            <td>بنك الرياض</td>
+        </tr>
+        <tr>
+            <td><strong>رقم الحساب</strong></td>
+            <td>2641457329940</td>
+        </tr>
+        <tr>
+            <td><strong>رقم الآيبان</strong></td>
+            <td>SA 8720000002641457329940</td>
+        </tr>
+    </table>
+
+    <div class="section-title">تقرير مراجع الحسابات:</div>
+    <p>إذا تلقينا أدلة مراجعة كافية ومناسبة لدعم كل جانب من جوانب الأمور ذات الأهمية الخاصة بالمراجعة، فسيكون شكل ومحتوى تقرير المراجعة الخاص بنا عبارة عن رأي غير معدل.</p>
+
+    <p style="margin-top: 30px;">إننا نقدر منحنا الفرصة لتقديم خدماتنا المهنية لكم بصفة مراجع حسابات خارجي مستقل ونتطلع إلى التعاون الكامل منكم ومن موظفيكم.</p>
+
+    <p style="text-align: center; margin: 30px 0;"><strong>وتفضلوا بقبول فائق الشكر والتقدير</strong></p>
+
+    <table class="signature-table">
+        <tr>
+            <td style="width: 50%; text-align: center;">
+                <p><strong>شركة علي فهد مسعود</strong></p>
+                <p>محاسبون ومراجعون قانونيون</p>
+                <p style="margin-top: 20px;">الإسم: علي فهد مسعود</p>
+                <p>المنصب: الشريك المدير</p>
+                <p>التاريخ: ${today}</p>
+                <p>التوقيع: _______________</p>
+            </td>
+            <td style="width: 50%; text-align: center;">
+                <p><strong>${clientName}</strong></p>
+                <p>سجل تجاري رقم ${crNumber}</p>
+                <p style="margin-top: 20px;">الإسم: ${clientRep}</p>
+                <p>المنصب: ${clientPosition}</p>
+                <p>التاريخ: ${today}</p>
+                <p>التوقيع: _______________</p>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+            `;
+
+            // Create blob and download
+            const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `خطاب_ارتباط_${clientName}_${year}.html`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            closeModal('letterModal');
+            alert('✅ تم تصدير الخطاب!\n\nالخطوات:\n1. افتح الملف في Word\n2. اضبط التنسيق إذا لزم\n3. احفظه كـ PDF');
+        }
+
         function generateLetter() {
             const clientName = document.getElementById('clientName').value;
             const clientRep = document.getElementById('clientRep').value;
@@ -1006,65 +1248,88 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
-            // Add Arabic font support
-            doc.addFont('https://cdn.jsdelivr.net/npm/amiri-font@1.0.0/fonts/amiri-regular.ttf', 'Amiri', 'normal');
-            doc.setFont('Amiri');
-            doc.setR2L(true);
-
             const priceBeforeVAT = currentProposal.priceBeforeVAT || 0;
             const vat = priceBeforeVAT * 0.15;
             const totalPrice = priceBeforeVAT + vat;
             const advance = totalPrice * (advancePercent / 100);
             const remaining = totalPrice - advance;
+            const today = new Date().toLocaleDateString('ar-SA');
 
-            // Header
+            // Header - English
             doc.setFontSize(20);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Engagement Letter', 105, 20, { align: 'center' });
             doc.text('خطاب الارتباط', 105, 30, { align: 'center' });
             
-            doc.setFontSize(12);
-            const today = new Date().toLocaleDateString('ar-SA');
-            doc.text(today, 180, 50);
+            // Date
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'normal');
+            doc.text(today, 170, 45);
 
-            // Client info
-            doc.text(`السادة / ${clientName}`, 180, 70);
-            doc.text(`سجل تجاري رقم: ${crNumber}`, 180, 80);
-            doc.text(`${clientAddress}، المملكة العربية السعودية`, 180, 90);
+            // Company info
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Ali Fahd Masoud CPA', 105, 60, { align: 'center' });
+            doc.text('شركة علي فهد مسعود محاسبون ومراجعون قانونيون', 105, 68, { align: 'center' });
+
+            // Client section
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(11);
+            doc.text('To: ' + clientName, 20, 85);
+            doc.text('CR: ' + crNumber, 20, 92);
+            doc.text('Address: ' + clientAddress, 20, 99);
 
             // Service description
-            doc.text(`خدمات المراجعة للسنة المنتهية في 31 ديسمبر ${year}م`, 180, 110);
+            doc.setFont('helvetica', 'bold');
+            doc.text(`Audit Services for the year ended December 31, ${year}`, 20, 115);
             
-            doc.setFontSize(10);
-            doc.text('سنقوم، بناءً على طلبكم، بمراجعة البيانات المالية بما يشمل:', 180, 130);
-            doc.text('• بيان المركز المالي', 180, 140);
-            doc.text('• بيان الربح أو الخسارة والدخل الشامل', 180, 150);
-            doc.text('• بيان التدفقات النقدية', 180, 160);
+            doc.setFont('helvetica', 'normal');
+            doc.text('We will conduct an audit of the financial statements including:', 20, 125);
+            doc.text('• Statement of Financial Position', 25, 133);
+            doc.text('• Statement of Profit or Loss and Comprehensive Income', 25, 140);
+            doc.text('• Statement of Cash Flows', 25, 147);
 
             // Fees table
-            doc.text('قيمة الأتعاب المهنية:', 180, 180);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Professional Fees:', 20, 165);
+            
             doc.autoTable({
-                startY: 190,
-                head: [['البيان', 'المبلغ']],
+                startY: 172,
+                head: [['Description', 'Amount (SAR)']],
                 body: [
-                    ['مراجعة الحسابات (قبل الضريبة)', `${priceBeforeVAT.toFixed(0)} ريال`],
-                    ['ضريبة القيمة المضافة 15%', `${vat.toFixed(0)} ريال`],
-                    ['الإجمالي', `${totalPrice.toFixed(0)} ريال`],
-                    ['الدفعة المقدمة', `${advance.toFixed(0)} ريال (${advancePercent}%)`],
-                    ['عند إصدار التقرير', `${remaining.toFixed(0)} ريال`]
+                    ['Audit Services (before VAT)', priceBeforeVAT.toFixed(0).toLocaleString()],
+                    ['VAT 15%', vat.toFixed(0).toLocaleString()],
+                    ['Total', totalPrice.toFixed(0).toLocaleString()],
+                    ['Advance Payment (' + advancePercent + '%)', advance.toFixed(0).toLocaleString()],
+                    ['Upon Report Issuance', remaining.toFixed(0).toLocaleString()]
                 ],
                 theme: 'grid',
-                styles: { font: 'Amiri', halign: 'right' },
-                headStyles: { fillColor: [200, 159, 101] }
+                styles: { font: 'helvetica', fontSize: 10 },
+                headStyles: { fillColor: [200, 159, 101], textColor: [0, 0, 0], fontStyle: 'bold' },
+                columnStyles: {
+                    0: { halign: 'left' },
+                    1: { halign: 'right' }
+                }
             });
 
             // Signatures
-            const finalY = doc.lastAutoTable.finalY + 30;
-            doc.text('شركة علي فهد مسعود', 140, finalY);
-            doc.text(clientName, 40, finalY);
-            doc.text('محاسبون ومراجعون قانونيون', 140, finalY + 10);
-            doc.text(`الممثل: ${clientRep}`, 40, finalY + 10);
-            doc.text(`المنصب: ${clientPosition}`, 40, finalY + 20);
+            const finalY = doc.lastAutoTable.finalY + 25;
+            doc.setFont('helvetica', 'bold');
+            doc.text('Ali Fahd Masoud CPA', 130, finalY);
+            doc.text(clientName, 30, finalY);
+            
+            doc.setFont('helvetica', 'normal');
+            doc.text('Auditor', 130, finalY + 7);
+            doc.text('Representative: ' + clientRep, 30, finalY + 7);
+            doc.text('Position: ' + clientPosition, 30, finalY + 14);
 
-            doc.save(`خطاب_ارتباط_${clientName}_${year}.pdf`);
+            doc.text('Signature: _______________', 130, finalY + 25);
+            doc.text('Signature: _______________', 30, finalY + 25);
+
+            doc.text('Date: ' + today, 130, finalY + 32);
+            doc.text('Date: _______________', 30, finalY + 32);
+
+            doc.save(`Engagement_Letter_${clientName}_${year}.pdf`);
             closeModal('letterModal');
             alert('تم إصدار خطاب الارتباط بنجاح!');
         }
